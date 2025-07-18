@@ -1,7 +1,9 @@
+import { Timestamp } from "firebase/firestore";
+
 export interface Team {
   id: string;
   name: string;
-  createdBy: string;
+  ownerId: string;
   members: string[];
-  createdAt: string;
+  createdAt: Timestamp;
 }

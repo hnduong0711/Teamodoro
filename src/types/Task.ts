@@ -1,14 +1,17 @@
 import type { ChecklistItem } from "./ChecklistItem";
+import { Timestamp } from "firebase/firestore";
 
 export interface Task {
   id: string;
   title: string;
   description?: string;
-  columnId: string;
   assignedTo?: string[];
-  dueDate?: string;
+  startDate: Timestamp;
+  dueDate?: Timestamp;
+  isStart: boolean;
+  isDone: boolean;
   checklist?: ChecklistItem[];
-  createdAt: string;
+  createdAt: Timestamp;
   createdBy: string;
   position: number;
   focusCount: number;
