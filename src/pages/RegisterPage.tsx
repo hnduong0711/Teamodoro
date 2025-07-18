@@ -1,23 +1,25 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, updateProfile } from 'firebase/auth';
 import { doc, setDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
-import { validateEmail, validatePassword } from '../utils/validation';
-import { slideFromLeft } from '../utils/motionVariants'; // Giả định file chứa motionVariants
-import { type User } from '../types/User'; // Giả định file chứa interface User
+import { validateEmail, validatePassword, validateDisplayName } from '../utils/validation';
+import { slideFromRight } from '../utils/motionVariants';
+import { type User } from '../types/User';
 
-const Login: React.FC = () => {
+const Register: React.FC = () => {
+  const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     const emailValidation = validateEmail(email);
     const passwordValidation = validatePassword(password);
+    const displayNameValidation = validateDisplayName(displayName);
 
     if (!emailValidation.isValid) {
       setError(emailValidation.error);
@@ -27,16 +29,30 @@ const Login: React.FC = () => {
       setError(passwordValidation.error);
       return;
     }
+    if (!displayNameValidation.isValid) {
+      setError(displayNameValidation.error);
+      return;
+    }
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      await updateProfile(user, { displayName });
+      const userData: User = {
+        id: user.uid,
+        displayName,
+        email,
+        avatarUrl: user.photoURL || '',
+        createdAt: Timestamp.now(),
+      };
+      await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
       navigate('/');
     } catch (err) {
-      setError('Đăng nhập thất bại. Vui lòng kiểm tra email hoặc mật khẩu.');
+      setError('Đăng ký thất bại. Vui lòng kiểm tra thông tin.');
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleRegister = async () => {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
@@ -51,19 +67,32 @@ const Login: React.FC = () => {
       await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
       navigate('/');
     } catch (err) {
-      setError('Đăng nhập bằng Google thất bại. Vui lòng thử lại.');
+      setError('Đăng ký bằng Google thất bại. Vui lòng thử lại.');
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
       <motion.div
-        {...slideFromLeft}
+        {...slideFromRight}
         className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md"
       >
-        <h2 className="text-2xl font-bold text-center mb-6 text-gray-900 dark:text-white">Đăng nhập</h2>
+        <h2 className="text-2xl font-bold text-center mb-6 text-gray-900 dark:text-white">Đăng ký</h2>
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
-        <form onSubmit={handleEmailLogin}>
+        <form onSubmit={handleRegister}>
+          <div className="mb-4">
+            <label className="block text-gray-700 dark:text-gray-200 mb-2" htmlFor="displayName">
+              Tên hiển thị
+            </label>
+            <input
+              type="text"
+              id="displayName"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:text-white"
+              placeholder="Nhập tên hiển thị"
+            />
+          </div>
           <div className="mb-4">
             <label className="block text-gray-700 dark:text-gray-200 mb-2" htmlFor="email">
               Email
@@ -94,19 +123,19 @@ const Login: React.FC = () => {
             type="submit"
             className="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700"
           >
-            Đăng nhập
+            Đăng ký
           </button>
         </form>
         <button
-          onClick={handleGoogleLogin}
+          onClick={handleGoogleRegister}
           className="w-full mt-4 bg-red-600 text-white p-3 rounded-lg hover:bg-red-700"
         >
-          Đăng nhập bằng Google
+          Đăng ký bằng Google
         </button>
         <p className="mt-4 text-center text-gray-600 dark:text-gray-300">
-          Chưa có tài khoản?{' '}
-          <a href="/register" className="text-blue-600 hover:underline">
-            Đăng ký
+          Đã có tài khoản?{' '}
+          <a href="/login" className="text-blue-600 hover:underline">
+            Đăng nhập
           </a>
         </p>
       </motion.div>
@@ -114,4 +143,4 @@ const Login: React.FC = () => {
   );
 };
 
-export default Login;
+export default Register;

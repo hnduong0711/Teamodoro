@@ -11,31 +11,33 @@ import AccountPage from "./pages/AccountPage";
 import TaskPage from "./pages/TaskPage";
 import FocusPage from "./pages/FocusPage";
 import HomePage from "./pages/HomePage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 
 const App = () => {
-
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<TeamLayout />}>
-          <Route path="/team/:teamId" element={<TeamPage />} />
-        </Route>
-        <Route element={<BoardLayout />}>
-          <Route path="/board/:boardId" element={<BoardPage />} />
-          <Route path="/board/:boardId/weekly" element={<WeeklyView />} />
-        </Route>
-        <Route element={<NoSidebarLayout />}>
-
-          <Route path="/" index element={<HomePage />} />
-          <Route path="task/:taskId" element={<TaskPage />} />
-          <Route
-            path="/task/:taskId/focus"
-            element={<FocusPage />}
-          />
-        </Route>
-        <Route element={<AccountLayout />}>
-          <Route path="/account" element={<AccountPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<TeamLayout />}>
+            <Route path="/team/:teamId" element={<TeamPage />} />
+          </Route>
+          <Route element={<BoardLayout />}>
+            <Route path="/board/:boardId" element={<BoardPage />} />
+            <Route path="/board/:boardId/weekly" element={<WeeklyView />} />
+          </Route>
+          <Route element={<NoSidebarLayout />}>
+            <Route path="/" index element={<HomePage />} />
+            <Route path="task/:taskId" element={<TaskPage />} />
+            <Route path="/task/:taskId/focus" element={<FocusPage />} />
+          </Route>
+          <Route element={<AccountLayout />}>
+            <Route path="/account" element={<AccountPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>

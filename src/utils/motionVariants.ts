@@ -25,15 +25,27 @@ export const slideFromTop: Variants = {
 }
 
 export const slideFromLeft: Variants = {
-  initial: { x: -50, opacity: 0 },
-  animate: { x: 0, opacity: 1, transition: { duration: 0.3 } },
-  exit: { x: -50, opacity: 0, transition: { duration: 0.3 } },
+  initial: { x: '100vw' , opacity: 0 },
+  animate: { x: 0, opacity: 1, transition: { duration: 1 } },
+  exit: { x: '-100vw', opacity: 0, transition: { duration: 1 } },
+}
+
+export const slideFromLeftSlow: Variants = {
+  initial: { x: '100vw', opacity: 0 },
+  animate: { x: 0, opacity: 1, transition: { duration: 1.5 } },
+  exit: { x: -50, opacity: 0, transition: { duration: 1.5 } },
 }
 
 export const slideFromRight: Variants = {
+  initial: { x: '-100vw', opacity: 0 },
+  animate: { x: 0, opacity: 1, transition: { duration: 1 } },
+  exit: { x: '100vw', opacity: 0, transition: { duration: 1 } },
+}
+
+export const slideFromRightSlow: Variants = {
   initial: { x: 50, opacity: 0 },
-  animate: { x: 0, opacity: 1, transition: { duration: 0.3 } },
-  exit: { x: 50, opacity: 0, transition: { duration: 0.3 } },
+  animate: { x: 0, opacity: 1, transition: { duration: 0.5 } },
+  exit: { x: 50, opacity: 0, transition: { duration: 0.5 } },
 }
 
 export const scaleIn: Variants = {
