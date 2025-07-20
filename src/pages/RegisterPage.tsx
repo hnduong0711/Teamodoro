@@ -1,12 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, updateProfile } from 'firebase/auth';
-import { doc, setDoc, Timestamp } from 'firebase/firestore';
-import { auth, db } from '../config/firebase';
 import { validateEmail, validatePassword, validateDisplayName } from '../utils/validation';
 import { slideFromRight } from '../utils/motionVariants';
-import { type User } from '../types/User';
+import { registerWithEmail, loginWithGoogle } from '../services/authService';
 
 const Register: React.FC = () => {
   const [displayName, setDisplayName] = useState('');
@@ -35,17 +32,7 @@ const Register: React.FC = () => {
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      await updateProfile(user, { displayName });
-      const userData: User = {
-        id: user.uid,
-        displayName,
-        email,
-        avatarUrl: user.photoURL || '',
-        createdAt: Timestamp.now(),
-      };
-      await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
+      await registerWithEmail(displayName, email, password);
       navigate('/');
     } catch (err) {
       setError('Đăng ký thất bại. Vui lòng kiểm tra thông tin.');
@@ -53,18 +40,8 @@ const Register: React.FC = () => {
   };
 
   const handleGoogleRegister = async () => {
-    const provider = new GoogleAuthProvider();
     try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      const userData: User = {
-        id: user.uid,
-        displayName: user.displayName || 'Người dùng',
-        email: user.email || '',
-        avatarUrl: user.photoURL || '',
-        createdAt: Timestamp.now(),
-      };
-      await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
+      await loginWithGoogle();
       navigate('/');
     } catch (err) {
       setError('Đăng ký bằng Google thất bại. Vui lòng thử lại.');

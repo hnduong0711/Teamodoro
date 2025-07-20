@@ -1,14 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { doc, setDoc, Timestamp } from 'firebase/firestore';
-import { auth, db } from '../config/firebase';
 import { validateEmail, validatePassword } from '../utils/validation';
-import { slideFromLeft } from '../utils/motionVariants'; // Giả định file chứa motionVariants
-import { type User } from '../types/User'; // Giả định file chứa interface User
+import { slideFromLeft } from '../utils/motionVariants';
+import { loginWithEmail, loginWithGoogle } from '../services/authService';
 
-const Login: React.FC = () => {
+const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -29,7 +26,7 @@ const Login: React.FC = () => {
     }
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await loginWithEmail(email, password);
       navigate('/');
     } catch (err) {
       setError('Đăng nhập thất bại. Vui lòng kiểm tra email hoặc mật khẩu.');
@@ -37,18 +34,8 @@ const Login: React.FC = () => {
   };
 
   const handleGoogleLogin = async () => {
-    const provider = new GoogleAuthProvider();
     try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      const userData: User = {
-        id: user.uid,
-        displayName: user.displayName || 'Người dùng',
-        email: user.email || '',
-        avatarUrl: user.photoURL || '',
-        createdAt: Timestamp.now(),
-      };
-      await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
+      await loginWithGoogle();
       navigate('/');
     } catch (err) {
       setError('Đăng nhập bằng Google thất bại. Vui lòng thử lại.');

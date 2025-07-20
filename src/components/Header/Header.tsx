@@ -1,16 +1,18 @@
 import { motion } from "framer-motion";
 import { fade } from "../../utils/motionVariants";
 import TextLogo from "../../assets/Logo/TextLogo.jpeg";
-import { Bell, User } from "lucide-react";
+import { Bell, User, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { logout } from "../../services/authService";
+import { useAuth } from "../../hooks/useAuth";
 
 const Header = () => {
-  const user = null;
+  const { user } = useAuth();
   const navigate = useNavigate();
   return (
     <motion.div
       {...fade}
-      className="bg-white flex justify-between items-center px-10"
+      className="bg-white flex justify-between items-center px-10 py-5"
     >
       <img
         src={TextLogo}
@@ -21,7 +23,19 @@ const Header = () => {
         <div className="cursor-pointer">
           <Bell />
         </div>
-        <div className="cursor-pointer">{user ? "Avatar" : <User />}</div>
+        <div className="cursor-pointer">
+          {user ? (
+            <img
+              className="size-10 rounded-3xl"
+              src={user.photoURL ?? undefined}
+            ></img>
+          ) : (
+            <User />
+          )}
+        </div>
+        <div className="cursor-pointer" onClick={logout}>
+          {user ? <LogOut /> : <span></span>}
+        </div>
       </div>
     </motion.div>
   );
