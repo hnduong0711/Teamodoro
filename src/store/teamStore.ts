@@ -27,6 +27,4 @@ export const useTeamStore = create<TeamState>((set) => ({
         teams: state.teams.filter((team) => team.id !== teamId),
         currentTeam: state.currentTeam?.id === teamId ? null : state.currentTeam,
     })),
-
-    
 }))
