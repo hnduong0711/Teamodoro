@@ -12,7 +12,7 @@ const Header = () => {
   return (
     <motion.div
       {...fade}
-      className="bg-white flex justify-between items-center px-10 py-5"
+      className="bg-white flex justify-between items-center pr-10 py-5"
     >
       <img
         src={TextLogo}

@@ -12,6 +12,7 @@ import {
 import TeamModal from "../components/Modals/TeamModal";
 import type { Team } from "../types/Team";
 import { useAuth } from "../hooks/useAuth";
+import Spinner from "../components/Spinner/Spinner";
 
 const HomePage: React.FC = () => {
   const { teams, setCurrentTeam } = useTeamStore();
@@ -31,6 +32,10 @@ const HomePage: React.FC = () => {
   const handleOptionsClick = (teamId: string) => {
     setIsDropdownOpen(isDropdownOpen === teamId ? null : teamId);
   };
+
+  const handleSelectTeam = (team: Team) => {
+    setCurrentTeam(team)
+  }
 
   const handleLeaveTeam = (teamId: string) => {
     if (window.confirm("Bạn có chắc muốn rời nhóm?")) {
@@ -56,7 +61,7 @@ const HomePage: React.FC = () => {
     setIsDropdownOpen(null);
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <Spinner />;
 
   return (
     <div className="p-6">
@@ -78,6 +83,7 @@ const HomePage: React.FC = () => {
             <NavLink
               to={`/team/${team.id}`}
               className="block mb-2 text-lg font-semibold"
+              onClick={() => handleSelectTeam(team)}
             >
               {team.name}
             </NavLink>

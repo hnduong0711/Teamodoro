@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, UserPlus, Trash2, Save } from 'lucide-react';
 import { addTeam, updateTeam } from '../../services/teamService';
 import { Timestamp } from 'firebase/firestore';
-import { useAuth } from '../../hooks/useAuth'; // Giả định useAuth đã tồn tại
+import { useAuth } from '../../hooks/useAuth';
 import type { Team } from '../../types/Team';
 
 interface TeamModalProps {
@@ -30,7 +30,7 @@ const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, team }) => {
     if (team) {
       await updateTeam(team.id, { name, members, ownerId: team.ownerId });
     } else {
-      await addTeam(teamData);
+      await addTeam(teamData, user.uid);
     }
     onClose();
   };
