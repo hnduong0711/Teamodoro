@@ -174,7 +174,7 @@ const TeamPage = () => {
               transition={{ delay: 0.1 * index, duration: 0.3 }}
               className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md relative"
             >
-              <NavLink to={`/board/${board.id}`} className="block mb-2 text-lg font-semibold">
+              <NavLink to={`/board/${board.id}`} onClick={() => {setCurrentBoard(board)}} className="block mb-2 text-lg font-semibold">
                 {board.name}
               </NavLink>
               <div className="relative">
