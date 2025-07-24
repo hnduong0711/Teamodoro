@@ -96,6 +96,7 @@ const BoardPage = () => {
                   column={column}
                   onEdit={handleEditColumn}
                   onDelete={handleDeleteColumn}
+                  
                 />
               ))}
               <div className="bg-gray-100 p-4 rounded-lg min-w-[250px] flex items-center justify-center">

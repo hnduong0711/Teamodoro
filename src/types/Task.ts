@@ -16,4 +16,5 @@ export interface Task {
   position: number;
   focusCount: number;
   focusType: string;
+  columnId: string;
 }

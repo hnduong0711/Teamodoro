@@ -66,15 +66,14 @@ export const reorderColumns = async (teamId: string, boardId: string, activeId: 
   const overColumn = columns.find((c) => c.id === overId);
   if (!activeColumn || !overColumn) return;
 
-  // Hoán đổi position giữa hai column
+  // hoán đổi position hai col
   const tempPosition = activeColumn.position;
   activeColumn.position = overColumn.position;
   overColumn.position = tempPosition;
 
-  // Sắp xếp lại toàn bộ columns dựa trên position mới
+  // sắp xếp lại col dựa vào position mới
   const sortedColumns = [...columns].sort((a, b) => a.position - b.position);
 
-  // Cập nhật Firestore và store
   const promises = sortedColumns.map((col) =>
     updateDoc(doc(columnsCollection, col.id), { position: sortedColumns.indexOf(col) })
   );
