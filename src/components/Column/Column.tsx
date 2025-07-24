@@ -41,6 +41,7 @@ const Column: React.FC<ColumnProps> = ({ id, column, onEdit, onDelete }) => {
   const teamId = currentTeam?.id;
   const boardId = currentBoard?.id;
   const columnTasks = tasksByColumn[id] || [];
+  const [tempTaskId, setTempTaskId] = useState<string | undefined>(undefined);
 
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(column.name);
@@ -53,18 +54,18 @@ const Column: React.FC<ColumnProps> = ({ id, column, onEdit, onDelete }) => {
 
   useEffect(() => {
     if (teamId && boardId && id) {
-      setTasks(id, []); // Reset tasks cho column cụ thể
+      setTasks(id, []);
       const unsubscribe = subscribeToTasks(teamId, boardId, id);
       return () => unsubscribe();
     }
   }, [teamId, boardId, id, setTasks]);
 
-  const handleEdit = (e: React.MouseEvent) => {
+  const handleEditColumn = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsEditing(true);
   };
 
-  const handleSave = () => {
+  const handleSaveColumn = () => {
     if (currentBoard?.id && currentTeam?.id) {
       onEdit(id, currentTeam.id, currentBoard.id, name);
       useColumnStore.getState().updateColumn(id, { name });
@@ -72,7 +73,7 @@ const Column: React.FC<ColumnProps> = ({ id, column, onEdit, onDelete }) => {
     }
   };
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDeleteColumn = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDelete(id);
   };
@@ -100,6 +101,8 @@ const Column: React.FC<ColumnProps> = ({ id, column, onEdit, onDelete }) => {
 
   const handleAddTask = () => {
     setIsModalOpen(true);
+    setCurrentTask(null)
+    setTempTaskId(crypto.randomUUID());
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -131,18 +134,18 @@ const Column: React.FC<ColumnProps> = ({ id, column, onEdit, onDelete }) => {
   return (
     <div className="flex flex-col" ref={setNodeRef} style={style}>
       <div className="flex space-x-4 cursor-move">
-        <div onClick={handleEdit} className="flex-1 cursor-text font-semibold">
+        <div onClick={handleEditColumn} className="flex-1 cursor-text font-semibold">
           {isEditing ? (
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              onBlur={handleSave}
-              onKeyPress={(e) => e.key === "Enter" && handleSave()}
+              onBlur={handleSaveColumn}
+              onKeyPress={(e) => e.key === "Enter" && handleSaveColumn()}
               autoFocus
               className="w-full p-1 border rounded"
             />
           ) : (
-            <div onClick={handleEdit} className="cursor-text">
+            <div onClick={handleEditColumn} className="cursor-text">
               {name}
             </div>
           )}
@@ -158,7 +161,7 @@ const Column: React.FC<ColumnProps> = ({ id, column, onEdit, onDelete }) => {
               className="w-6 h-6 rounded-full"
             />
           </div>
-          <button onClick={handleDelete} className="text-red-500">
+          <button onClick={handleDeleteColumn} className="text-red-500">
             <Trash2 size={16} />
           </button>
         </div>
@@ -190,10 +193,11 @@ const Column: React.FC<ColumnProps> = ({ id, column, onEdit, onDelete }) => {
         </div>
         <TaskModal
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          onClose={() => {setIsModalOpen(false); setTempTaskId(undefined);}}
           columnId={id}
           teamId={teamId ?? ""}
           boardId={boardId ?? ""}
+          tempTaskId={tempTaskId ?? ""}
         />
       </div>
     </div>

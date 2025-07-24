@@ -3,6 +3,7 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, que
 import { useColumnStore } from '../store/columnStore';
 import { type Column } from '../types/Column';
 
+// lấy dữ liệu 1 lần 
 export const fetchColumns = async (teamId: string, boardId: string) => {
   if (!teamId || !boardId) {
     console.log("No teamId or boardId, setting columns to empty");
@@ -18,6 +19,7 @@ export const fetchColumns = async (teamId: string, boardId: string) => {
   useColumnStore.getState().setColumns(columns);
 };
 
+// theo dõi dữ liệu
 export const subscribeToColumns = (teamId: string, boardId: string, callback?: () => void) => {
   if (!teamId || !boardId) {
     console.log("No teamId or boardId, setting columns to empty in subscribe");
@@ -37,6 +39,7 @@ export const subscribeToColumns = (teamId: string, boardId: string, callback?: (
   return unsubscribe;
 };
 
+// thêm 
 export const addColumn = async (teamId: string, boardId: string, columnData: Omit<Column, 'id' | 'position'> & { createdBy: string }) => {
   if (!teamId || !boardId) throw new Error('No teamId or boardId found');
   const columnsCollection = collection(db, `teams/${teamId}/boards/${boardId}/columns`);
@@ -45,18 +48,21 @@ export const addColumn = async (teamId: string, boardId: string, columnData: Omi
   await addDoc(columnsCollection, { ...columnData, position: newPosition });
 };
 
+// sửa
 export const updateColumn = async (teamId: string, boardId: string, columnId: string, updates: Partial<Column>) => {
   const columnRef = doc(db, `teams/${teamId}/boards/${boardId}/columns`, columnId);
   await updateDoc(columnRef, updates);
   useColumnStore.getState().updateColumn(columnId, updates);
 };
 
+// xóa
 export const deleteColumn = async (teamId: string, boardId: string, columnId: string) => {
   const columnRef = doc(db, `teams/${teamId}/boards/${boardId}/columns`, columnId);
   await deleteDoc(columnRef);
   useColumnStore.getState().deleteColumn(columnId);
 };
 
+// kéo thả
 export const reorderColumns = async (teamId: string, boardId: string, activeId: string, overId: string) => {
   const columnsCollection = collection(db, `teams/${teamId}/boards/${boardId}/columns`);
   const snapshot = await getDocs(columnsCollection);

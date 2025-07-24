@@ -5,7 +5,7 @@ interface TaskState {
   tasksByColumn: Record<string, Task[]>;
   currentTask: Task | null;
   setTasks: (columnId: string, tasks: Task[]) => void;
-  setCurrentTask: (task: Task) => void;
+  setCurrentTask: (task: Task | null) => void;
   addTask: (columnId: string, task: Task) => void;
   updateTaskInState: (
     columnId: string,

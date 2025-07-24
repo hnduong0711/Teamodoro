@@ -15,6 +15,7 @@ import {
 import { useTaskStore } from "../store/taskStore";
 import { type Task } from "../types/Task";
 
+// lấy dữ liệu 1 lần
 export const fetchTasks = async (
   teamId: string,
   boardId: string,
@@ -42,6 +43,7 @@ export const fetchTasks = async (
   useTaskStore.getState().setTasks(columnId, tasks);
 };
 
+// theo dõi dữ liệu
 export const subscribeToTasks = (
   teamId: string,
   boardId: string,
@@ -79,6 +81,7 @@ export const subscribeToTasks = (
   return unsubscribe;
 };
 
+// thêm task
 export const addTask = async (
   teamId: string,
   boardId: string,
@@ -104,6 +107,7 @@ export const addTask = async (
   });
 };
 
+// sửa task
 export const updateTask = async (
   teamId: string,
   boardId: string,
@@ -120,6 +124,7 @@ export const updateTask = async (
   useTaskStore.getState().updateTaskInState(columnId, taskId, updates);
 };
 
+// xóa task
 export const deleteTask = async (
   teamId: string,
   boardId: string,
@@ -135,6 +140,7 @@ export const deleteTask = async (
   useTaskStore.getState().deleteTask(columnId, taskId);
 };
 
+// kéo thả
 // export const moveTask = async (
 //   teamId: string,
 //   sourceBoardId: string,

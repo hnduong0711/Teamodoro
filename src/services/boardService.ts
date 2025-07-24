@@ -4,6 +4,7 @@ import { useBoardStore } from '../store/boardStore';
 import { type Board } from '../types/Board';
 import type { Team } from '../types/Team';
 
+// lấy dữ liệu 1 lần 
 export const fetchBoards = async (teamId: string | null, userEmail: string | null, userId: string | null) => {
   if (!teamId || !userEmail || !userId) {
     console.log("No teamId, userEmail, or userId, setting boards to empty");
@@ -30,6 +31,7 @@ export const fetchBoards = async (teamId: string | null, userEmail: string | nul
   useBoardStore.getState().setBoards(uniqueBoards);
 };
 
+// theo dõi dữ liệu
 export const subscribeToBoards = (teamId: string | null, userEmail: string | null, userId: string | null, callback?: () => void) => {
   if (!teamId || !userEmail || !userId) {
     console.log("No teamId, userEmail, or userId, setting boards to empty in subscribe");
@@ -74,21 +76,25 @@ export const subscribeToBoards = (teamId: string | null, userEmail: string | nul
   };
 };
 
+// thêm 
 export const addBoard = async (teamId: string, board: Omit<Board, 'id' | 'createdAt'>, userId: string) => {
   if (!teamId || !userId) throw new Error('No teamId or userId found');
   await addDoc(collection(db, `teams/${teamId}/boards`), { ...board, createdBy: userId, createdAt: Timestamp.now() });
 };
 
+// sửa
 export const updateBoard = async (teamId: string, boardId: string, updates: Partial<Board>) => {
   await updateDoc(doc(db, `teams/${teamId}/boards`, boardId), updates);
   useBoardStore.getState().updateBoard(boardId, updates);
 };
 
+// xóa
 export const deleteBoard = async (teamId: string, boardId: string) => {
   await deleteDoc(doc(db, `teams/${teamId}/boards`, boardId));
   useBoardStore.getState().deleteBoard(boardId);
 };
 
+// phân quyền thành viên
 export const addMemberToBoard = async (teamId: string, boardId: string, email: string) => {
   const boardRef = doc(db, `teams/${teamId}/boards`, boardId);
   const boardSnap = await getDoc(boardRef);
@@ -96,7 +102,7 @@ export const addMemberToBoard = async (teamId: string, boardId: string, email: s
 
   const boardData = boardSnap.data() as Board;
 
-  // Lấy thông tin team để kiểm tra members
+  // lấy thông tin team để kiểm tra members
   const teamRef = doc(db, 'teams', teamId);
   const teamSnap = await getDoc(teamRef);
   if (!teamSnap.exists()) throw new Error('Team not found');
@@ -112,6 +118,7 @@ export const addMemberToBoard = async (teamId: string, boardId: string, email: s
   useBoardStore.getState().updateBoard(boardId, { members: updatedMembers });
 };
 
+// xóa khỏi bảng
 export const removeMemberFromBoard = async (teamId: string, boardId: string, email: string) => {
   const boardRef = doc(db, `teams/${teamId}/boards`, boardId);
   const boardSnap = await getDoc(boardRef);

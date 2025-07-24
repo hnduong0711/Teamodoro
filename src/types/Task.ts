@@ -1,4 +1,3 @@
-import type { ChecklistItem } from "./ChecklistItem";
 import { Timestamp } from "firebase/firestore";
 
 export interface Task {
@@ -10,7 +9,6 @@ export interface Task {
   dueDate?: Timestamp;
   isStart: boolean;
   isDone: boolean;
-  checklist?: ChecklistItem[];
   createdAt: Timestamp;
   createdBy: string;
   position: number;
