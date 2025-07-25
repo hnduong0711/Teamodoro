@@ -22,7 +22,12 @@ import {
 import TaskModal from "../Modals/TaskModal";
 import { useTaskStore } from "../../store/taskStore";
 import TaskItem from "../Task/TaskItem";
-import { deleteTask, subscribeToTasks } from "../../services/taskService";
+import {
+  deleteTask,
+  moveTask,
+  subscribeToTasks,
+  updateTask,
+} from "../../services/taskService";
 
 interface ColumnProps {
   id: string;
@@ -101,40 +106,82 @@ const Column: React.FC<ColumnProps> = ({ id, column, onEdit, onDelete }) => {
 
   const handleAddTask = () => {
     setIsModalOpen(true);
-    setCurrentTask(null)
+    setCurrentTask(null);
     setTempTaskId(crypto.randomUUID());
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
-    // const { active, over } = event;
-    // if (!active || !over || active.id === over.id) return;
-    // const activeTask = columnTasks.find((t) => t.id === active.id.toString());
-    // const overTask = columnTasks.find((t) => t.id === over.id.toString()) || (columns.find(c => c.id !== id)?.tasksByColumn[over.id.toString()]?.find(t => t.id === over.id.toString()));
-    // if (!activeTask || !overTask) return;
-    // if (column.id === id) {
-    //   // Kéo thả trong cùng column
-    //   const oldIndex = columnTasks.findIndex((t) => t.id === active.id.toString());
-    //   const newIndex = columnTasks.findIndex((t) => t.id === over.id.toString());
-    //   const newTasks = arrayMove(columnTasks, oldIndex, newIndex);
-    //   setTasks(id, newTasks);
-    //   const promises = newTasks.map((task, index) =>
-    //     updateTask(teamId ?? "", boardId!, id, task.id, { position: index })
-    //   );
-    //   await Promise.all(promises);
-    // } else {
-    //   // Kéo thả giữa các column
-    //   const targetColumn = columns.find((c) => c.id === over.id.toString().split('-')[1]);
-    //   if (targetColumn && teamId && boardId) {
-    //     const newPosition = (tasksByColumn[targetColumn.id] || []).length > 0 ? Math.max(...(tasksByColumn[targetColumn.id] || []).map(t => t.position)) + 1 : 0;
-    //     await moveTask(teamId, boardId!, id, boardId!, targetColumn.id, active.id.toString(), newPosition);
-    //   }
-    // }
+    const { active, over } = event;
+    if (!active || !over || active.id === over.id) return;
+
+    const [_, activeTaskId, sourceColumnId] = active.id.toString().split("-");
+    const [__, overTaskId, targetColumnId] = over.id.toString().split("-");
+
+    console.log(activeTaskId);
+    console.log(sourceColumnId);
+    console.log(overTaskId);
+    console.log(targetColumnId);
+
+    if (!activeTaskId || !sourceColumnId || !targetColumnId) return;
+
+    const isSameColumn = sourceColumnId === targetColumnId;
+
+    if (isSameColumn) {
+      const tasks = tasksByColumn[sourceColumnId];
+      const oldIndex = tasks.findIndex((t) => t.id === activeTaskId);
+      const newIndex = tasks.findIndex((t) => t.id === overTaskId);
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const newTasks = arrayMove(tasks, oldIndex, newIndex);
+      setTasks(sourceColumnId, newTasks);
+
+      await Promise.all(
+        newTasks.map((task, index) =>
+          updateTask(teamId!, boardId!, sourceColumnId, task.id, {
+            position: index,
+          })
+        )
+      );
+    } else {
+      const sourceTasks = tasksByColumn[sourceColumnId] || [];
+      const targetTasks = tasksByColumn[targetColumnId] || [];
+
+      const movingTask = sourceTasks.find((t) => t.id === activeTaskId);
+      if (!movingTask) return;
+
+      const newIndex = targetTasks.findIndex((t) => t.id === overTaskId);
+      const insertIndex = newIndex >= 0 ? newIndex : targetTasks.length;
+
+      const updatedSourceTasks = sourceTasks.filter(
+        (t) => t.id !== activeTaskId
+      );
+      const updatedTargetTasks = [
+        ...targetTasks.slice(0, insertIndex),
+        { ...movingTask, position: insertIndex },
+        ...targetTasks.slice(insertIndex),
+      ];
+
+      setTasks(sourceColumnId, updatedSourceTasks);
+      setTasks(targetColumnId, updatedTargetTasks);
+
+      await moveTask(
+        teamId!,
+        boardId!,
+        sourceColumnId,
+        targetColumnId,
+        activeTaskId,
+        insertIndex
+      );
+    }
   };
 
   return (
     <div className="flex flex-col" ref={setNodeRef} style={style}>
       <div className="flex space-x-4 cursor-move">
-        <div onClick={handleEditColumn} className="flex-1 cursor-text font-semibold">
+        <div
+          onClick={handleEditColumn}
+          className="flex-1 cursor-text font-semibold"
+        >
           {isEditing ? (
             <input
               value={name}
@@ -166,19 +213,20 @@ const Column: React.FC<ColumnProps> = ({ id, column, onEdit, onDelete }) => {
           </button>
         </div>
       </div>
-      <div className="bg-gray-200 p-4 rounded-lg mb-4 flex flex-col space-y-4">
+      <div className="bg-gray-200 p-4 rounded-lg mb-4 flex flex-col space-y-2">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          <SortableContext items={columnTasks.map((t) => t.id)}>
+          <SortableContext items={columnTasks.map((t) => `task-${t.id}-${id}`)}>
             {columnTasks.map((task) => (
               <TaskItem
                 key={task.id}
-                id={task.id}
+                id={task.id} // vẫn là taskId
                 title={task.title}
-                columnId={id}
+                boardId={boardId || ""}
+                columnId={id} // để TaskItem biết columnId
                 onEdit={handleEditTask}
                 onDelete={handleDeleteTask}
               />
@@ -193,7 +241,10 @@ const Column: React.FC<ColumnProps> = ({ id, column, onEdit, onDelete }) => {
         </div>
         <TaskModal
           isOpen={isModalOpen}
-          onClose={() => {setIsModalOpen(false); setTempTaskId(undefined);}}
+          onClose={() => {
+            setIsModalOpen(false);
+            setTempTaskId(undefined);
+          }}
           columnId={id}
           teamId={teamId ?? ""}
           boardId={boardId ?? ""}

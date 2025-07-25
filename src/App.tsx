@@ -31,8 +31,8 @@ const App = () => {
           </Route>
           <Route element={<NoSidebarLayout />}>
             <Route path="/" index element={<HomePage />} />
-            <Route path="task/:taskId" element={<TaskPage />} />
-            <Route path="/task/:taskId/focus" element={<FocusPage />} />
+            <Route path="/board/:boardId/column/:columnId/task/:taskId" element={<TaskPage />} />
+            <Route path="/board/:boardId/column/:columnId/task/:taskId/focus" element={<FocusPage />} />
           </Route>
           <Route element={<AccountLayout />}>
             <Route path="/account" element={<AccountPage />} />

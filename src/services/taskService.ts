@@ -15,7 +15,7 @@ import {
 import { useTaskStore } from "../store/taskStore";
 import { type Task } from "../types/Task";
 
-// lấy dữ liệu 1 lần
+// lấy dữ liệu 1 lần all task
 export const fetchTasks = async (
   teamId: string,
   boardId: string,
@@ -41,6 +41,24 @@ export const fetchTasks = async (
   );
   console.log("Fetched tasks for column:", columnId, tasks);
   useTaskStore.getState().setTasks(columnId, tasks);
+};
+
+// lấy dữ liệu 1 lần 1 task
+export const fetchTask = async (
+  teamId: string,
+  boardId: string,
+  columnId: string,
+  taskId: string
+) => {
+  const taskRef = doc(
+    db,
+    `teams/${teamId}/boards/${boardId}/columns/${columnId}/tasks/${taskId}`
+  );
+  const docSnap = await getDoc(taskRef);
+  if (docSnap.exists()) {
+    return { id: docSnap.id, ...docSnap.data() } as Task;
+  }
+  return null;
 };
 
 // theo dõi dữ liệu
@@ -80,7 +98,30 @@ export const subscribeToTasks = (
 
   return unsubscribe;
 };
-
+// theo dõi 1 task
+export const subscribeToTask = (
+  teamId: string,
+  boardId: string,
+  columnId: string,
+  taskId: string,
+  callback: (task: Task | null) => void
+) => {
+  const taskRef = doc(
+    db,
+    `teams/${teamId}/boards/${boardId}/columns/${columnId}/tasks/${taskId}`
+  );
+  return onSnapshot(
+    taskRef,
+    (docSnap) => {
+      if (docSnap.exists()) {
+        callback({ id: docSnap.id, ...docSnap.data() } as Task);
+      } else {
+        callback(null);
+      }
+    },
+    (error) => console.error("Error subscribing to task:", error)
+  );
+};
 // thêm task
 export const addTask = async (
   teamId: string,
@@ -141,74 +182,80 @@ export const deleteTask = async (
 };
 
 // kéo thả
-// export const moveTask = async (
-//   teamId: string,
-//   sourceBoardId: string,
-//   sourceColumnId: string,
-//   targetBoardId: string,
-//   targetColumnId: string,
-//   taskId: string,
-//   newPosition: number
-// ) => {
-//   const sourceTaskRef = doc(
-//     db,
-//     `teams/${teamId}/boards/${sourceBoardId}/columns/${sourceColumnId}/tasks`,
-//     taskId
-//   );
-//   const targetTasksCollection = collection(
-//     db,
-//     `teams/${teamId}/boards/${targetBoardId}/columns/${targetColumnId}/tasks`
-//   );
+export const moveTask = async (
+  teamId: string,
+  boardId: string,
+  sourceColumnId: string,
+  targetColumnId: string,
+  taskId: string,
+  newPosition: number
+) => {
+  const taskRef = doc(
+    db,
+    `teams/${teamId}/boards/${boardId}/columns/${sourceColumnId}/tasks`,
+    taskId
+  );
 
-//   const taskSnap = await getDoc(sourceTaskRef);
-//   if (!taskSnap.exists()) throw new Error("Task not found");
+  const taskSnap = await getDoc(taskRef);
+  if (!taskSnap.exists()) throw new Error("Task not found");
 
-//   const taskData = taskSnap.data() as Task;
-//   await deleteDoc(sourceTaskRef);
-//   const newTaskRef = await addDoc(targetTasksCollection, {
-//     ...taskData,
-//     position: newPosition,
-//     columnId: targetColumnId,
-//   });
-//   const newTask: Task = {
-//     id: newTaskRef.id,
-//     ...taskData,
-//     position: newPosition,
-//     columnId: targetColumnId,
-//   };
+  const taskData = taskSnap.data() as Task;
 
-//   const sourceSnapshot = await getDocs(
-//     collection(
-//       db,
-//       `teams/${teamId}/boards/${sourceBoardId}/columns/${sourceColumnId}/tasks`
-//     )
-//   );
-//   const targetSnapshot = await getDocs(targetTasksCollection);
-//   const sourceTasks = sourceSnapshot.docs
-//     .map((doc) => ({ id: doc.id, ...doc.data() } as Task))
-//     .filter((t) => t.id !== taskId);
-//   const targetTasks = targetSnapshot.docs.map(
-//     (doc) => ({ id: doc.id, ...doc.data() } as Task)
-//   );
+  // tạo task mới ở target column với dữ liệu cũ + position mới
+  const targetTasksRef = collection(
+    db,
+    `teams/${teamId}/boards/${boardId}/columns/${targetColumnId}/tasks`
+  );
+  const newTaskRef = await addDoc(targetTasksRef, {
+    ...taskData,
+    columnId: targetColumnId,
+    position: newPosition,
+  });
 
-//   const updatePositions = (tasks: Task[], colId: string) =>
-//     tasks.map((task, index) => ({
-//       ref: doc(
-//         db,
-//         `teams/${teamId}/boards/${sourceBoardId}/columns/${colId}/tasks`,
-//         task.id
-//       ),
-//       updates: { position: index },
-//     }));
+  await deleteDoc(taskRef);
 
-//   const promises = [
-//     ...updatePositions(sourceTasks, sourceColumnId),
-//     ...updatePositions(targetTasks, targetColumnId),
-//   ];
-//   await Promise.all(
-//     promises.map(({ ref, updates }) => updateDoc(ref, updates))
-//   );
+  // lấy danh sách task còn lại từ cả 2 column
+  const [sourceSnap, targetSnap] = await Promise.all([
+    getDocs(
+      collection(
+        db,
+        `teams/${teamId}/boards/${boardId}/columns/${sourceColumnId}/tasks`
+      )
+    ),
+    getDocs(targetTasksRef),
+  ]);
 
-//   useTaskStore.getState().deleteTask(sourceColumnId, taskId);
-//   useTaskStore.getState().addTask(targetColumnId, newTask);
-// };
+  const sourceTasks = sourceSnap.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as Task[];
+  const targetTasks = targetSnap.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as Task[];
+
+  // update lại position theo index
+  const updatePositionOps = [...sourceTasks, ...targetTasks].map(
+    (task, index) => {
+      const columnId =
+        task.columnId === sourceColumnId ? sourceColumnId : targetColumnId;
+      const ref = doc(
+        db,
+        `teams/${teamId}/boards/${boardId}/columns/${columnId}/tasks`,
+        task.id
+      );
+      return updateDoc(ref, { position: index });
+    }
+  );
+
+  await Promise.all(updatePositionOps);
+
+  // update store
+  useTaskStore.getState().deleteTask(sourceColumnId, taskId);
+  useTaskStore.getState().addTask(targetColumnId, {
+    ...taskData,
+    id: newTaskRef.id,
+    columnId: targetColumnId,
+    position: newPosition,
+  });
+};

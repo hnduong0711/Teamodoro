@@ -76,7 +76,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
   columnId,
   teamId,
   boardId,
-  tempTaskId
+  tempTaskId,
 }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -88,7 +88,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const { itemsByTask, setItems } = useCLIStore();
   const { currentTask } = useTaskStore();
   const taskId = currentTask?.id || tempTaskId;
-  
 
   useEffect(() => {
     if (isOpen && taskId) {
@@ -143,7 +142,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
     }
   };
 
-
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!active || !over || active.id === over.id) return;
@@ -155,12 +153,13 @@ const TaskModal: React.FC<TaskModalProps> = ({
     const newItems = arrayMove(itemsByTask[taskId] || [], oldIndex, newIndex);
     setItems(taskId, newItems);
     await moveChecklistItem(
-      teamId,
-      boardId,
-      columnId,
-      taskId,
+      teamId!,
+      boardId!,
+      columnId!,
+      taskId!,
       active.id.toString(),
-      newIndex
+      newIndex,
+      checklistItems
     );
   };
 
