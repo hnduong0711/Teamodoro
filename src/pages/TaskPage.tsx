@@ -180,7 +180,7 @@ const TaskPage: React.FC = () => {
 
   const handleFocusMode = () => {
     if (taskId && boardId) {
-      navigate(`/board/${boardId}/task/${taskId}/focus`);
+      navigate(`/board/${boardId}/column/${columnId}/task/${taskId}/focus`);
     }
   };
 

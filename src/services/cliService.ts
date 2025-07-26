@@ -45,8 +45,7 @@ export const addChecklistItem = async (teamId: string, boardId: string, columnId
   const itemsCollection = collection(db, `teams/${teamId}/boards/${boardId}/columns/${columnId}/tasks/${taskId}/checkListItem`);
   const snapshot = await getDocs(itemsCollection);
   const newPosition = snapshot.size > 0 ? Math.max(...snapshot.docs.map((doc) => doc.data().position || 0)) + 1 : 0;
-  const docRef = await addDoc(itemsCollection, { ...itemData, position: newPosition });
-  const newItem: ChecklistItem = { id: docRef.id, position: newPosition, ...itemData };
+  await addDoc(itemsCollection, { ...itemData, position: newPosition });
 };
 
 // sửa cli
