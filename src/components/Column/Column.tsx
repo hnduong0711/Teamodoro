@@ -176,7 +176,7 @@ const Column: React.FC<ColumnProps> = ({ id, column, onEdit, onDelete }) => {
   };
 
   return (
-    <div className="flex flex-col" ref={setNodeRef} style={style}>
+    <div className="flex flex-col min-w-[300px]" ref={setNodeRef} style={style}>
       <div className="flex space-x-4 cursor-move">
         <div
           onClick={handleEditColumn}

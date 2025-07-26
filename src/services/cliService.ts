@@ -94,3 +94,12 @@ export const moveChecklistItem = async (
     position: index,
   })));
 };
+
+// tính progress
+export const totalProgress = (teamId: string, boardId: string, columnId: string, taskId: string) => {
+  if(!teamId || !boardId || !columnId || !teamId) {
+    useCLIStore.getState().setItems(taskId, []);
+    return
+  }
+
+} 
