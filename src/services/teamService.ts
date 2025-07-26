@@ -2,6 +2,7 @@ import { db } from '../config/firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, Timestamp, getDoc } from 'firebase/firestore';
 import { useTeamStore } from '../store/teamStore';
 import { type Team } from '../types/Team';
+import { fetchUserByEmail } from './userService';
 
 // lấy dữ liệu 1 lần 
 export const fetchTeams = async (userId: string | null, email: string | null) => {
@@ -80,34 +81,35 @@ export const deleteTeam = async (teamId: string) => {
 
 // thêm thành viên vào team
 export const addMemberToTeam = async (teamId: string, email: string) => {
-  console.log('Attempting to add member to team with teamId:', teamId);
-  
   const teamRef = doc(db, 'teams', teamId);
   const teamSnap = await getDoc(teamRef);
-  console.log('Team snapshot:', teamSnap.data());
 
   if (!teamSnap.exists()) throw new Error('Team not found');
 
   const teamData = teamSnap.data() as Team;
   // kiểm tra user tồn tại trong collection
-  const usersQuery = query(collection(db, 'users'), where('email', '==', email));
-  const usersSnap = await getDocs(usersQuery);
-  if (usersSnap.empty) {
-    alert('User with this email does not exist!');
+  const user = await fetchUserByEmail(email);
+
+  if (!user) {
+    alert('Người dùng không tồn tại !');
     return;
   }
-  const updatedMembers = teamData.members ? [...teamData.members, email] : [email];
+
+  console.log(user);
+  
+
+  const updatedMembers = teamData.members ? [...teamData.members, user.id] : [user.id];
   await updateDoc(teamRef, { members: updatedMembers });
   useTeamStore.getState().updateTeam(teamId, { members: updatedMembers });
 };
 
 // xóa thành viên khỏi team
-export const removeMemberFromTeam = async (teamId: string, email: string) => {
+export const removeMemberFromTeam = async (teamId: string, memberId: string) => {
   const teamRef = doc(db, 'teams', teamId);
   const teamSnap = await getDoc(teamRef);
   if (!teamSnap.exists()) throw new Error('Team not found');
     const teamData = teamSnap.data() as Team;
-    const updatedMembers = teamData.members ? teamData.members.filter((m: string) => m !== email) : [];
+    const updatedMembers = teamData.members ? teamData.members.filter((m: string) => m !== memberId) : [];
     await updateDoc(teamRef, { members: updatedMembers });
     useTeamStore.getState().updateTeam(teamId, { members: updatedMembers });
 };

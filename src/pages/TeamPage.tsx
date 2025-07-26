@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, X, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import { useTeamStore } from '../store/teamStore';
@@ -9,30 +9,44 @@ import { addMemberToTeam, removeMemberFromTeam } from '../services/teamService';
 import { NavLink } from 'react-router-dom';
 import BoardModal from '../components/Modals/BoardModal';
 import type { Board } from '../types/Board';
+import {  fetchUserById, fetchUsersByIds } from '../services/userService';
+import type { User } from '../types/User';
 
 const TeamPage = () => {
   const currentTeam = useTeamStore((s) => s.currentTeam);
   const { boards, setCurrentBoard } = useBoardStore();
   const { user, loading } = useAuth();
   const [newMember, setNewMember] = useState("");
-  const [members, setMembers] = useState<string[]>(currentTeam?.members || []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState<string | null>(null);
+  const [leaderName, setLeaderName] = useState("")
+  const [membersData, setMembersData] = useState<User[]>([]);
 
+  const members = currentTeam?.members || [];
   useEffect(() => {
     if (!loading && currentTeam?.id && user?.email && user?.uid) {
       fetchBoards(currentTeam.id, user.email, user.uid);
+      
       const unsubscribe = subscribeToBoards(currentTeam.id, user.email, user.uid);
       return () => unsubscribe();
     }
   }, [currentTeam?.id, user?.email, user?.uid, loading]);
-
-  console.log("Board after update: ", boards);
   
+  const memberlist = useMemo(() => Object.keys(members).sort(), [members]);
   useEffect(() => {
-    setMembers(currentTeam?.members || []);
-  }, [currentTeam?.members]);
+    const fetchLeaderData = async () => {
+      const leader = await fetchUserById(currentTeam?.ownerId ?? "")
+      setLeaderName(leader?.displayName ?? "")
+    }
+    const fetchMembersData = async () => {
+      const membersData = await fetchUsersByIds(members);
+      setMembersData(membersData)
+    }
+    fetchLeaderData();
+    fetchMembersData();
+  }, [currentTeam, memberlist])
 
+  
   const handleAddMemberToTeam = async () => {
     if (newMember && currentTeam?.id && !members.includes(newMember)) {
       try {
@@ -44,9 +58,9 @@ const TeamPage = () => {
     }
   };
 
-  const handleRemoveMemberFromTeam = async (email: string) => {
+  const handleRemoveMemberFromTeam = async (memberId: string) => {
     if (currentTeam?.id) {
-      await removeMemberFromTeam(currentTeam.id, email);
+      await removeMemberFromTeam(currentTeam.id, memberId);
     }
   };
 
@@ -106,17 +120,17 @@ const TeamPage = () => {
           Danh sách thành viên
         </motion.span>
         <ul className="space-y-4 flex flex-col">
-          {members.map((memberEmail) => (
+          {membersData.map((member) => (
             <motion.li
-              key={memberEmail}
+              key={member.id}
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.3 }}
               className="flex items-center space-x-4 cursor-pointer"
             >
-              <img src="" className="size-6" alt="hinhanh" />
-              <span className="">{memberEmail}</span>
-              <button onClick={() => handleRemoveMemberFromTeam(memberEmail)} className="cursor-pointer">
+              <img src={member.avatarUrl} className="size-6" alt="hinhanh" />
+              <span className="">{member.displayName}</span>
+              <button onClick={() => handleRemoveMemberFromTeam(member.id)} className="cursor-pointer">
                 <X />
               </button>
             </motion.li>
@@ -145,7 +159,7 @@ const TeamPage = () => {
         >
           <span className="">
             <span className="font-bold">Trưởng nhóm: </span>
-            {currentTeam?.ownerId}
+            {leaderName}
           </span>
           <div className="flex items-center space-x-4 p-2">
             <input

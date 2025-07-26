@@ -25,6 +25,9 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, X } from "lucide-react";
 import type { ChecklistItem } from "../types/ChecklistItem";
 import { useTeamStore } from "../store/teamStore";
+import { addChatMessage, subscribeToChatMessages } from "../services/chatService";
+import { useAuth } from "../hooks/useAuth";
+import { useChatStore } from "../store/chatStore";
 
 const SortableChecklistItem = ({
   item,
@@ -122,6 +125,9 @@ const TaskPage: React.FC = () => {
   const [isDoneClicked, setIsDoneClicked] = useState(false);
   const { currentTeam } = useTeamStore();
   const teamId = currentTeam?.id;
+  const [newMessage, setNewMessage] = useState("");
+  const { messagesByTask, setMessages } = useChatStore();
+  const {user} = useAuth();
 
   useEffect(() => {
     if (teamId && boardId && columnId && taskId) {
@@ -138,9 +144,11 @@ const TaskPage: React.FC = () => {
         columnId,
         taskId
       );
+      const unsubscribeMessages = subscribeToChatMessages(teamId, boardId, columnId, taskId);
       return () => {
         unsubscribeTask();
         unsubscribeChecklist();
+        unsubscribeMessages();
       };
     }
   }, [teamId, boardId, columnId, taskId, setCurrentTask, setItems]);
@@ -213,6 +221,15 @@ const TaskPage: React.FC = () => {
     );
   };
 
+  const chatMessages = messagesByTask[taskId || ""] || [];
+  const currentUserId = user?.uid;
+  const handleSendMessage = () => {
+    if (teamId && boardId && columnId && taskId && newMessage && user?.uid) {
+      addChatMessage(teamId, boardId, columnId, taskId, user.uid, newMessage);
+      setNewMessage("");
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-gray-100 p-4">
       {/* Zone 1: Task Information */}
@@ -278,9 +295,8 @@ const TaskPage: React.FC = () => {
         )}
       </div>
 
-      {/* Zone 2: Two Div Layout */}
       <div className="flex flex-1 space-x-4">
-        {/* Div 1: Checklist Items */}
+        {/* Checklist Items */}
         <div className="bg-white p-4 rounded-lg shadow flex-1 max-w-[50%]">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xl font-semibold">Danh sách công việc</h3>
@@ -328,19 +344,40 @@ const TaskPage: React.FC = () => {
           </DndContext>
         </div>
 
-        {/* Div 2: Chat (Placeholder) */}
+        {/* Chat */}
         <div className="bg-white p-4 rounded-lg shadow flex-1 max-w-[50%]">
           <h3 className="text-xl font-semibold mb-4">Chat</h3>
-          <div className="h-64 mb-4 border rounded">
-            Chat history placeholder
+          <div className="h-64 mb-4 border rounded overflow-y-auto">
+            {chatMessages.map((message) => (
+              <div
+                key={message.id}
+                className={`mb-2 p-2 rounded-lg max-w-[70%] ${
+                  message.senderId === currentUserId
+                    ? "bg-blue-100 ml-auto"
+                    : "bg-gray-100"
+                }`}
+              >
+                {/* Placeholder for avatar */}
+                {message.senderId !== currentUserId && <div className="w-8 h-8 bg-gray-300 rounded-full inline-block mr-2"></div>}
+                <p>{message.text}</p>
+                <small className="text-gray-500">
+                  {message.createdAt.toDate().toLocaleTimeString()}
+                </small>
+              </div>
+            ))}
           </div>
           <div className="flex">
             <input
               type="text"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Type a message"
               className="flex-1 p-2 border rounded"
             />
-            <button className="ml-2 bg-blue-500 text-white px-4 py-2 rounded">
+            <button
+              onClick={handleSendMessage}
+              className="ml-2 bg-blue-500 text-white px-4 py-2 rounded"
+            >
               Send
             </button>
           </div>
