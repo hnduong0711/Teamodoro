@@ -4,7 +4,7 @@ import { useTaskStore } from "../store/taskStore";
 import { subscribeToTask, updateTask } from "../services/taskService";
 import { useCLIStore } from "../store/cliStore";
 import {
-  fetchChecklistItems,
+fetchChecklistItems,
   subscribeToChecklistItems,
   updateChecklistItem,
   addChecklistItem,
@@ -28,6 +28,7 @@ import { useTeamStore } from "../store/teamStore";
 import { addChatMessage, subscribeToChatMessages } from "../services/chatService";
 import { useAuth } from "../hooks/useAuth";
 import { useChatStore } from "../store/chatStore";
+import { Timestamp } from "firebase/firestore";
 
 const SortableChecklistItem = ({
   item,
@@ -161,7 +162,7 @@ const TaskPage: React.FC = () => {
 
   const handleStart = () => {
     if (!isStartClicked && currentTask && !currentTask.isStart) {
-      updateTask(teamId!, boardId!, columnId!, taskId!, { isStart: true });
+      updateTask(teamId!, boardId!, columnId!, taskId!, { isStart: true, startDate: Timestamp.now(),});
       setIsStartClicked(true);
     }
   };

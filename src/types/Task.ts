@@ -5,7 +5,7 @@ export interface Task {
   title: string;
   description?: string;
   assignedTo?: string[];
-  startDate: Timestamp;
+  startDate?: Timestamp | null;
   dueDate?: Timestamp;
   isStart: boolean;
   isDone: boolean;

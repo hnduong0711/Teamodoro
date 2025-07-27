@@ -170,7 +170,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
       title,
       description,
       assignedTo: assignedEmails ?? [],
-      startDate: currentTask?.startDate || Timestamp.now(),
+      startDate: currentTask?.startDate ?? null,
       dueDate: dueDate ? Timestamp.fromDate(new Date(dueDate)) : undefined,
       isStart: currentTask?.isStart || false,
       isDone: currentTask?.isDone || false,
