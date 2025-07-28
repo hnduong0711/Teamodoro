@@ -14,6 +14,7 @@ import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
+import ChangePasswordPage from "./pages/ChangePasswordPage";
 
 const App = () => {
   return (
@@ -37,6 +38,7 @@ const App = () => {
           <Route element={<AccountLayout />}>
             <Route path="/account" element={<AccountPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/change-password" element={<ChangePasswordPage />} />
           </Route>
         </Route>
       </Routes>

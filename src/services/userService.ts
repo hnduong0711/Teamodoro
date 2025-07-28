@@ -1,4 +1,4 @@
-import { db, storage } from "../config/firebase";
+import { db } from "../config/firebase";
 import {
   collection,
   query,
@@ -9,7 +9,6 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import type { User } from "../types/User";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
 // lấy thông tin 1 user bằng email (dùng cho add member vào team/board)
 export const fetchUserByEmail = async (email: string): Promise<User | null> => {
@@ -56,7 +55,7 @@ export const uploadImageToCloudinary = async (
   file: File
 ): Promise<string | null> => {
   const cloudName = "dripiq1he";
-  const uploadPreset = "unsigned_upload"; // tạo preset ở bước dưới
+  const uploadPreset = "unsigned_upload";
 
   const formData = new FormData();
   formData.append("file", file);
@@ -73,5 +72,5 @@ export const uploadImageToCloudinary = async (
   if (!res.ok) return null;
 
   const data = await res.json();
-  return data.secure_url as string; // đây là URL ảnh để lưu vào Firestore
+  return data.secure_url as string; // url trả về
 };
