@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { fade } from "../../utils/motionVariants";
 import TextLogo from "../../assets/Logo/TextLogo.jpeg";
 import { Bell, User, LogOut } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { logout } from "../../services/authService";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -23,7 +23,7 @@ const Header = () => {
         <div className="cursor-pointer">
           <Bell />
         </div>
-        <div className="cursor-pointer">
+        <NavLink to="/account" className="cursor-pointer">
           {user ? (
             <img
               className="size-10 rounded-3xl"
@@ -32,7 +32,7 @@ const Header = () => {
           ) : (
             <User />
           )}
-        </div>
+        </NavLink>
         <div className="cursor-pointer" onClick={logout}>
           {user ? <LogOut /> : <span></span>}
         </div>
