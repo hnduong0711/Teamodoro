@@ -27,9 +27,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
     useSortable({ id: sortableId });
   const style = { transform: CSS.Transform.toString(transform), transition };
   const { getProgressByTask } = useCLIStore();
-  const { done, total, percent } = getProgressByTask(id);
-
-  console.log(done, total, percent);
+  const { percent } = getProgressByTask(id);
 
   return (
     <div ref={setNodeRef} style={style}>

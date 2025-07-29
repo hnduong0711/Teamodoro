@@ -88,7 +88,7 @@ const Column: React.FC<ColumnProps> = ({ id, column, onEdit, onDelete }) => {
       teamId &&
       boardId &&
       id &&
-      window.confirm("Are you sure you want to delete this task?")
+      window.confirm("Bạn có chắc muốn xóa công việc này?")
     ) {
       deleteTask(teamId, boardId, id, taskId);
     }

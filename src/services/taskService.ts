@@ -145,6 +145,7 @@ export const addTask = async (
     position: newPosition,
     createdAt: Timestamp.now(),
     columnId,
+    progress: 0,
   });
 };
 
@@ -177,7 +178,20 @@ export const deleteTask = async (
     `teams/${teamId}/boards/${boardId}/columns/${columnId}/tasks`,
     taskId
   );
+
+  // xóa checklist items
+  const checklistRef = collection(taskRef, "/checkListItem");
+  const checklistSnap = await getDocs(checklistRef);
+
+  const deleteChecklistPromises = checklistSnap.docs.map((doc) =>
+    deleteDoc(doc.ref)
+  );
+  await Promise.all(deleteChecklistPromises);
+
+  // xóa task
   await deleteDoc(taskRef);
+
+  // cập nhật store
   useTaskStore.getState().deleteTask(columnId, taskId);
 };
 

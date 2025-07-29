@@ -15,4 +15,5 @@ export interface Task {
   focusCount: number;
   focusType: string;
   columnId: string;
+  progress: number;
 }

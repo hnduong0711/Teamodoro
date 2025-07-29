@@ -49,11 +49,13 @@ const SortableChecklistItem = ({
     useSortable({ id: item.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
   const { currentTask } = useTaskStore();
+  const {getProgressByTask} = useCLIStore()
 
   const handleToggle = () => {
     updateChecklistItem(teamId, boardId, columnId, taskId, item.id, {
       done: !item.done,
     });
+    updateTask(teamId,boardId, columnId, taskId, {progress: getProgressByTask(taskId).percent})
   };
 
   const handleSaveEdit = () => {
