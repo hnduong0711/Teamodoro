@@ -23,8 +23,8 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     if (!loading && user) {
-      fetchTeams(user.uid, user.email);
-      const unsubscribe = subscribeToTeams(user.uid, user.email);
+      fetchTeams(user.uid);
+      const unsubscribe = subscribeToTeams(user.uid);
       return () => unsubscribe();
     }
   }, [user, loading]);
@@ -66,12 +66,15 @@ const HomePage: React.FC = () => {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Danh sách Team</h1>
+      {/* NÚT THÊM TEAM */}
       <button
         onClick={() => setIsAddModalOpen(true)}
         className="mb-4 bg-blue-600 text-white p-2 rounded-lg flex items-center gap-2"
       >
         <Plus size={18} /> Thêm Team
       </button>
+
+      {/* DANH SÁCH TEAM */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {teams.map((team) => (
           <motion.div
@@ -125,6 +128,8 @@ const HomePage: React.FC = () => {
           </motion.div>
         ))}
       </div>
+
+      {/* TEAM MODAL */}
       {isAddModalOpen && <TeamModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}

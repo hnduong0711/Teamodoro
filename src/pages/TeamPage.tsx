@@ -64,15 +64,18 @@ const TeamPage = () => {
     }
   };
 
-  const handleAddMemberToBoard = async (boardId: string, email: string) => {
-    if (currentTeam?.id) {
-      try {
-        await addMemberToBoard(currentTeam.id, boardId, email);
-      } catch (error) {
-        console.error('Error adding member to board:', error);
-      }
-    }
-  };
+const handleAddMemberToBoard = async (boardId: string, email: string) => {
+  if (!currentTeam?.id) {
+    throw new Error("Team ID not found");
+
+  }
+  try {
+    const result = await addMemberToBoard(currentTeam.id, boardId, email);
+    return result; 
+  } catch (error: any) {
+    throw error; 
+  }
+};
 
   const handleRemoveMemberFromBoard = async (boardId: string, email: string) => {
     if (currentTeam?.id) {
@@ -111,6 +114,7 @@ const TeamPage = () => {
         transition={{ duration: 0.5 }}
         className="flex flex-col space-y-4 px-8 bg-red-400 h-[500px] border rounded-tr-2xl rounded-br-2xl"
       >
+        {/* DANH SÁCH THÀNH VIÊN */}
         <motion.span
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}

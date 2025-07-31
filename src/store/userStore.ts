@@ -7,9 +7,10 @@ interface UserState {
   fetchUser: (userId: string) => Promise<void>;
   setUser: (userId: string, user: User) => void;
   fetchUsersByEmails: (emails: string[]) => Promise<void>;
+  getUserInfo: (userId: string) => User;
 }
 
-export const useUserStore = create<UserState>((set) => ({
+export const useUserStore = create<UserState>((set, get) => ({
   users: {},
   fetchUser: async (userId) => {
     const user = await fetchUserById(userId);
@@ -24,4 +25,7 @@ export const useUserStore = create<UserState>((set) => ({
       users: { ...state.users, ...users.reduce((acc, user) => user ? { ...acc, [user.id]: user } : acc, {}) }
     }));
   },
+  getUserInfo: (userId: string) => {
+    return get().users[userId] || null
+  }
 }));

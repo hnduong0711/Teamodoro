@@ -14,6 +14,9 @@ import {
 } from "firebase/firestore";
 import { useTaskStore } from "../store/taskStore";
 import { type Task } from "../types/Task";
+import { fetchUserByEmail } from "./userService";
+import type { Board } from "../types/Board";
+import { useTeamStore } from "../store/teamStore";
 
 // lấy dữ liệu 1 lần all task
 export const fetchTasks = async (
@@ -193,6 +196,74 @@ export const deleteTask = async (
 
   // cập nhật store
   useTaskStore.getState().deleteTask(columnId, taskId);
+};
+
+// phân quyền thành viên
+// thêm vào bảng
+export const addAssignedTask = async (
+  teamId: string,
+  boardId: string,
+  columnId: string,
+  taskId: string,
+  email: string
+) => {
+  const taskRef = doc(db, `teams/${teamId}/boards/${boardId}/columns/${columnId}/tasks/`, taskId);
+  const taskSnap = await getDoc(taskRef);
+  if (!taskSnap.exists()) throw new Error("Task not found");
+
+  const taskData = taskSnap.data() as Task;
+
+  // kiểm tra user tồn tại trong collection
+  const user = await fetchUserByEmail(email);
+  if (!user) {
+    throw new Error("Người dùng không tồn tại!");
+  }
+
+  // kiểm tra task có tồn tại không
+  const boardRef = doc(db, `teams/${teamId}/boards/`, boardId);
+  const boardSnap = await getDoc(boardRef);
+  if (!boardSnap.exists()) {
+    throw new Error("Không tìm thấy board");
+  }
+
+  // kiểm tra user thuộc team không
+  const teamData = boardSnap.data() as Board;
+  if (!teamData.members || !teamData.members.includes(user.id)) {
+    throw new Error("Người dùng không thuộc nhóm này!");
+  }
+
+  if(!taskData.assignedTo || !taskData.assignedTo.includes(user.id)) {
+    throw new Error("Người dùng không thuộc nhóm này!");
+  }
+  
+  // lưu user vào firebase
+  const updatedAssigned = taskData.assignedTo
+    ? [...taskData.assignedTo, user.id] : [user.id];
+  await updateDoc(taskRef, { assignedTo : updatedAssigned });
+  // update cho task
+  useTaskStore.getState().updateTaskInState(columnId,taskId,{assignedTo: updatedAssigned});
+  return { success: true, userId: user.id };
+};
+
+// xóa khỏi task
+export const removeAssignedTask = async (
+  teamId: string,
+  boardId: string,
+  columnId: string,
+  taskId: string,
+  email: string
+) => {
+  const taskRef = doc(db, `teams/${teamId}/boards/${boardId}/columns/${columnId}/tasks/`, taskId);
+
+  const taskSnap = await getDoc(taskRef);
+  if (taskSnap.exists()) {
+    const taskData = taskSnap.data() as Task;
+    const updatedMembers = taskData.assignedTo
+      ? taskData.assignedTo.filter((m: string) => m !== email)
+      : [];
+    await updateDoc(taskRef, { assignedTo: updatedMembers });
+    useTaskStore.getState().updateTaskInState(columnId,taskId,{ assignedTo: updatedMembers });
+  }
 };
 
 // kéo thả

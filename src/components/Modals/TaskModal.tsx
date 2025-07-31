@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Timestamp } from "firebase/firestore";
 import { useTaskStore } from "../../store/taskStore";
-import { addTask, updateTask } from "../../services/taskService";
+import {
+  addAssignedTask,
+  addTask,
+  updateTask,
+} from "../../services/taskService";
 import { useAuth } from "../../hooks/useAuth";
 import { type ChecklistItem } from "../../types/ChecklistItem";
 import { useCLIStore } from "../../store/cliStore";
@@ -121,10 +125,27 @@ const TaskModal: React.FC<TaskModalProps> = ({
     }
   }, [isOpen, taskId, currentTask, columnId, boardId, teamId, setItems]);
 
-  const addAssignedEmail = () => {
+  const addAssignedEmail = async () => {
     if (newEmail && !assignedEmails.includes(newEmail)) {
-      setAssignedEmails([...assignedEmails, newEmail]);
-      setNewEmail("");
+      try {
+        if (taskId) {
+          const result = await addAssignedTask(
+            teamId,
+            boardId,
+            columnId,
+            taskId,
+            newEmail
+          );
+          if (result.success) {
+            setAssignedEmails([...assignedEmails, result.userId]);
+            setNewEmail("");
+          }
+        }
+      } catch (error: any) {
+        alert(error.message);
+      }
+    } else {
+      alert("Người dùng đã đảm nhiệm !");
     }
   };
 
@@ -178,6 +199,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
       focusCount: currentTask?.focusCount || 0,
       focusType: currentTask?.focusType || "default",
       columnId,
+      progress: currentTask?.progress || 0,
     };
 
     try {

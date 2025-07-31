@@ -1,51 +1,84 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, UserPlus, Save } from 'lucide-react';
-import { addBoard, updateBoard } from '../../services/boardService';
-import { useAuth } from '../../hooks/useAuth';
-import type { Board } from '../../types/Board';
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, UserPlus, Save } from "lucide-react";
+import { addBoard, updateBoard } from "../../services/boardService";
+import { useAuth } from "../../hooks/useAuth";
+import type { Board } from "../../types/Board";
+import type { User } from "../../types/User";
+import { fetchUsersByIds } from "../../services/userService";
+import { useTeamStore } from "../../store/teamStore";
 
 interface BoardModalProps {
   isOpen: boolean;
   onClose: () => void;
   teamId: string;
   board?: Board;
-  onAddMemberToBoard: (boardId: string, email: string) => void;
+  onAddMemberToBoard: (
+    boardId: string,
+    email: string
+  ) => Promise<{ success: boolean; userId: string }>;
   onRemoveMemberFromBoard: (boardId: string, email: string) => void;
 }
 
-const BoardModal: React.FC<BoardModalProps> = ({ isOpen, onClose, teamId, board, onAddMemberToBoard, onRemoveMemberFromBoard }) => {
+const BoardModal: React.FC<BoardModalProps> = ({
+  isOpen,
+  onClose,
+  teamId,
+  board,
+  onAddMemberToBoard,
+  onRemoveMemberFromBoard,
+}) => {
   const { user } = useAuth();
-//   const { addBoard, updateBoard } = useBoardStore();
-  const [name, setName] = useState(board?.name || '');
+  const [name, setName] = useState(board?.name || "");
   const [isPublic, setIsPublic] = useState(board?.isPublic ?? true);
-  const [newMember, setNewMember] = useState('');
+  const [newMember, setNewMember] = useState("");
   const [members, setMembers] = useState<string[]>(board?.members || []);
+  const [membersData, setMembersData] = useState<User[]>([]);
 
   useEffect(() => {
-    setName(board?.name || '');
+    setName(board?.name || "");
     setIsPublic(board?.isPublic ?? true);
     setMembers(board?.members || []);
-    console.log(board?.isPublic);
-    
   }, [board]);
 
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const membersData = await fetchUsersByIds(members);
+      setMembersData(membersData);
+    };
+    fetchUserData();
+  }, [members]);
+
   const handleSave = async () => {
+    console.log(useTeamStore.getState().currentTeam);
+    
     if (!user?.uid || !teamId) return;
-    const boardData = { name, isPublic, members, createdBy: user.uid };
+    const memberSaved = isPublic ? useTeamStore.getState().currentTeam?.members : []; 
+    const boardData = { name, isPublic, members: memberSaved, createdBy: user.uid };
     if (board) {
       await updateBoard(teamId, board.id, boardData);
     } else {
       await addBoard(teamId, boardData, user.uid);
     }
+    setNewMember("");
     onClose();
   };
 
-  const handleAddMember = () => {
+  const handleAddMember = async () => {
     if (newMember && !members.includes(newMember)) {
-      setMembers([...members, newMember]);
-      setNewMember('');
-      if (board?.id) onAddMemberToBoard(board.id, newMember);
+      try {
+        if (board?.id) {
+          const result = await onAddMemberToBoard(board.id, newMember);
+          if (result.success) {
+            setMembers([...members, result.userId]);
+            setNewMember("");
+          }
+        }
+      } catch (error: any) {
+        alert(error.message);
+      }
+    } else {
+      alert("Người dùng đã có trong bảng !");
     }
   };
 
@@ -70,13 +103,20 @@ const BoardModal: React.FC<BoardModalProps> = ({ isOpen, onClose, teamId, board,
             className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md"
           >
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">{board ? 'Sửa Board' : 'Thêm Board'}</h2>
-              <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+              <h2 className="text-xl font-bold">
+                {board ? "Sửa Board" : "Thêm Board"}
+              </h2>
+              <button
+                onClick={onClose}
+                className="text-gray-500 hover:text-gray-700"
+              >
                 <X size={24} />
               </button>
             </div>
             <div className="mb-4">
-              <label className="block text-gray-700 dark:text-gray-200 mb-2">Tên Board</label>
+              <label className="block text-gray-700 dark:text-gray-200 mb-2">
+                Tên Board
+              </label>
               <input
                 type="text"
                 value={name}
@@ -85,27 +125,33 @@ const BoardModal: React.FC<BoardModalProps> = ({ isOpen, onClose, teamId, board,
               />
             </div>
             <div className="mb-4">
-              <label className="block text-gray-700 dark:text-gray-200 mb-2">Trạng thái</label>
+              <label className="block text-gray-700 dark:text-gray-200 mb-2">
+                Trạng thái
+              </label>
               <div className="flex space-x-4">
                 <label>
                   <input
                     type="radio"
                     checked={isPublic}
                     onChange={() => setIsPublic(true)}
-                  /> Public
+                  />{" "}
+                  Public
                 </label>
                 <label>
                   <input
                     type="radio"
                     checked={!isPublic}
                     onChange={() => setIsPublic(false)}
-                  /> Private
+                  />{" "}
+                  Private
                 </label>
               </div>
             </div>
             {!isPublic && (
               <div className="mb-4">
-                <label className="block text-gray-700 dark:text-gray-200 mb-2">Thêm Thành viên</label>
+                <label className="block text-gray-700 dark:text-gray-200 mb-2">
+                  Thêm Thành viên
+                </label>
                 <div className="flex gap-2 mb-2">
                   <input
                     type="email"
@@ -114,15 +160,21 @@ const BoardModal: React.FC<BoardModalProps> = ({ isOpen, onClose, teamId, board,
                     className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:text-white"
                     placeholder="Nhập email"
                   />
-                  <button onClick={handleAddMember} className="bg-blue-600 text-white p-2 rounded-lg">
+                  <button
+                    onClick={handleAddMember}
+                    className="bg-blue-600 text-white p-2 rounded-lg"
+                  >
                     <UserPlus size={18} />
                   </button>
                 </div>
                 <ul className="list-disc pl-5">
-                  {members.map((member) => (
-                    <li key={member} className="flex justify-between">
-                      {member}
-                      <button onClick={() => handleRemoveMember(member)} className="text-red-500 hover:text-red-700">
+                  {membersData.map((member) => (
+                    <li key={member.id} className="flex justify-between">
+                      {member.displayName}
+                      <button
+                        onClick={() => handleRemoveMember(member.id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
                         <X size={16} />
                       </button>
                     </li>
@@ -131,10 +183,19 @@ const BoardModal: React.FC<BoardModalProps> = ({ isOpen, onClose, teamId, board,
               </div>
             )}
             <div className="flex justify-end gap-2">
-              <button onClick={onClose} className="bg-gray-500 text-white p-2 rounded-lg">
+              <button
+                onClick={() => {
+                  onClose();
+                  setNewMember("");
+                }}
+                className="bg-gray-500 text-white p-2 rounded-lg"
+              >
                 Cancel
               </button>
-              <button onClick={handleSave} className="bg-green-600 text-white p-2 rounded-lg">
+              <button
+                onClick={handleSave}
+                className="bg-green-600 text-white p-2 rounded-lg"
+              >
                 <Save size={18} /> Save
               </button>
             </div>

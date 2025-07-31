@@ -1,10 +1,17 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, UserPlus, Trash2, Save } from 'lucide-react';
-import { addTeam, updateTeam } from '../../services/teamService';
-import { Timestamp } from 'firebase/firestore';
-import { useAuth } from '../../hooks/useAuth';
-import type { Team } from '../../types/Team';
+import React, { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, UserPlus, Trash2, Save } from "lucide-react";
+import {
+  addMemberToTeam,
+  addTeam,
+  removeMemberFromTeam,
+  updateTeam,
+} from "../../services/teamService";
+import { Timestamp } from "firebase/firestore";
+import { useAuth } from "../../hooks/useAuth";
+import type { Team } from "../../types/Team";
+import type { User } from "../../types/User";
+import { fetchUsersByIds } from "../../services/userService";
 
 interface TeamModalProps {
   isOpen: boolean;
@@ -14,19 +21,30 @@ interface TeamModalProps {
 
 const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, team }) => {
   const { user } = useAuth();
-  const [name, setName] = useState(team?.name || '');
-  const [newMember, setNewMember] = useState('');
+  const [name, setName] = useState(team?.name || "");
+  const [newMember, setNewMember] = useState("");
   const [members, setMembers] = useState<string[]>(team?.members || []);
+  const [membersData, setMembersData] = useState<User[]>([]);
 
-  console.log(team);
-  
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const membersData = await fetchUsersByIds(members);
+      setMembersData(membersData);
+    };
+    fetchUserData();
+  }, [members]);
 
   const handleSave = async () => {
     if (!user?.uid) {
-      console.error('No authenticated user found');
+      console.error("No authenticated user found");
       return;
     }
-    const teamData: Omit<Team, 'id'> = { name, ownerId: user.uid, members, createdAt: Timestamp.now() };
+    const teamData: Omit<Team, "id"> = {
+      name,
+      ownerId: user.uid,
+      members,
+      createdAt: Timestamp.now(),
+    };
     if (team) {
       await updateTeam(team.id, { name, members, ownerId: team.ownerId });
     } else {
@@ -35,15 +53,26 @@ const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, team }) => {
     onClose();
   };
 
-  const handleAddMember = () => {
-    if (newMember && !members.includes(newMember)) {
-      setMembers([...members, newMember]);
-      setNewMember('');
+  const handleAddMember = async (email: string) => {
+    if (team?.id) {
+      try {
+        const result = await addMemberToTeam(team?.id, email);
+        
+        if (result.success) {
+          setMembers([...members, result.userId]);
+          setNewMember("");
+        }
+      } catch (error: any) {
+        alert(error.message);
+      }
+    } else {
+      throw new Error("Team ID not found");
     }
   };
 
-  const handleRemoveMember = (memberEmail: string) => {
-    setMembers(members.filter((email) => email !== memberEmail));
+  const handleRemoveMember = async (memberId: string) => {
+    setMembers(members.filter((email) => email !== memberId));
+    if (team?.id) await removeMemberFromTeam(team.id, memberId);
   };
 
   return (
@@ -62,13 +91,20 @@ const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, team }) => {
             className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md"
           >
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">{team ? 'Sửa Team' : 'Thêm Team'}</h2>
-              <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+              <h2 className="text-xl font-bold">
+                {team ? "Sửa Team" : "Thêm Team"}
+              </h2>
+              <button
+                onClick={onClose}
+                className="text-gray-500 hover:text-gray-700"
+              >
                 <X size={24} />
               </button>
             </div>
             <div className="mb-4">
-              <label className="block text-gray-700 dark:text-gray-200 mb-2">Tên Team</label>
+              <label className="block text-gray-700 dark:text-gray-200 mb-2">
+                Tên Team
+              </label>
               <input
                 type="text"
                 value={name}
@@ -77,7 +113,9 @@ const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, team }) => {
               />
             </div>
             <div className="mb-4">
-              <label className="block text-gray-700 dark:text-gray-200 mb-2">Thêm Member (ID)</label>
+              <label className="block text-gray-700 dark:text-gray-200 mb-2">
+                Thêm Member (ID)
+              </label>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -85,18 +123,26 @@ const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, team }) => {
                   onChange={(e) => setNewMember(e.target.value)}
                   className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:text-white"
                 />
-                <button onClick={handleAddMember} className="bg-blue-600 text-white p-2 rounded-lg">
+                <button
+                  onClick={() => handleAddMember(newMember)}
+                  className="bg-blue-600 text-white p-2 rounded-lg"
+                >
                   <UserPlus size={18} />
                 </button>
               </div>
             </div>
             <div className="mb-4">
-              <label className="block text-gray-700 dark:text-gray-200 mb-2">Members</label>
+              <label className="block text-gray-700 dark:text-gray-200 mb-2">
+                Members
+              </label>
               <ul className="list-disc pl-5">
-                {members.map((memberEmail) => (
-                  <li key={memberEmail} className="flex justify-between">
-                    {memberEmail}
-                    <button onClick={() => handleRemoveMember(memberEmail)} className="text-red-500 hover:text-red-700">
+                {membersData.map((memberEmail) => (
+                  <li key={memberEmail.id} className="flex justify-between">
+                    {memberEmail.displayName}
+                    <button
+                      onClick={() => handleRemoveMember(memberEmail.id)}
+                      className="text-red-500 hover:text-red-700"
+                    >
                       <Trash2 size={16} />
                     </button>
                   </li>
@@ -104,10 +150,16 @@ const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, team }) => {
               </ul>
             </div>
             <div className="flex justify-end gap-2">
-              <button onClick={onClose} className="bg-gray-500 text-white p-2 rounded-lg">
+              <button
+                onClick={onClose}
+                className="bg-gray-500 text-white p-2 rounded-lg"
+              >
                 Hủy
               </button>
-              <button onClick={handleSave} className="bg-green-600 text-white p-2 rounded-lg">
+              <button
+                onClick={handleSave}
+                className="bg-green-600 text-white p-2 rounded-lg"
+              >
                 <Save size={18} />
                 Lưu
               </button>

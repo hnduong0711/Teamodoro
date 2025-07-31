@@ -5,8 +5,8 @@ import { type Team } from '../types/Team';
 import { fetchUserByEmail } from './userService';
 
 // lấy dữ liệu 1 lần 
-export const fetchTeams = async (userId: string | null, email: string | null) => {
-  if (!userId || !email) {
+export const fetchTeams = async (userId: string | null | null) => {
+  if (!userId) {
     console.log("No userId or email, setting teams to empty");
     useTeamStore.getState().setTeams([]);
     return;
@@ -16,7 +16,7 @@ export const fetchTeams = async (userId: string | null, email: string | null) =>
   const ownerSnapshot = await getDocs(ownerQuery);
   const ownerTeams = ownerSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Team));
 
-  const memberQuery = query(collection(db, 'teams'), where('members', 'array-contains', email));
+  const memberQuery = query(collection(db, 'teams'), where('members', 'array-contains', userId));
   const memberSnapshot = await getDocs(memberQuery);
   const memberTeams = memberSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Team));
 
@@ -27,8 +27,8 @@ export const fetchTeams = async (userId: string | null, email: string | null) =>
 };
 
 // theo dõi dữ liệu
-export const subscribeToTeams = (userId: string | null, email: string | null, callback?: () => void) => {
-  if (!userId || !email) {
+export const subscribeToTeams = (userId: string | null, callback?: () => void) => {
+  if (!userId) {
     console.log("No userId or email, setting teams to empty in subscribe");
     useTeamStore.getState().setTeams([]);
     return () => {};
@@ -48,7 +48,7 @@ export const subscribeToTeams = (userId: string | null, email: string | null, ca
     combineTeams(ownerTeams, memberTeams);
   }, (error) => console.error('Error subscribing to owner teams:', error));
 
-  const memberQuery = query(collection(db, 'teams'), where('members', 'array-contains', email));
+  const memberQuery = query(collection(db, 'teams'), where('members', 'array-contains', userId));
   let memberTeams: Team[] = [];
   const memberUnsubscribe = onSnapshot(memberQuery, (snapshot) => {
     memberTeams = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Team));
@@ -84,23 +84,28 @@ export const addMemberToTeam = async (teamId: string, email: string) => {
   const teamRef = doc(db, 'teams', teamId);
   const teamSnap = await getDoc(teamRef);
 
-  if (!teamSnap.exists()) throw new Error('Team not found');
+  // kiểm tra team 
+  if (!teamSnap.exists()) {
+    throw new Error("Không tìm thấy team");
+  }
 
   const teamData = teamSnap.data() as Team;
   // kiểm tra user tồn tại trong collection
   const user = await fetchUserByEmail(email);
-
   if (!user) {
-    alert('Người dùng không tồn tại !');
-    return;
+    throw new Error("Người dùng không tồn tại!");
   }
 
-  console.log(user);
-  
+  // kiểm tra user đã có trong team
+  if (Array.isArray(teamData.members) && teamData.members.includes(user.id)) {
+    throw new Error("Người dùng đã có mặt trong nhóm !");
+  }
 
   const updatedMembers = teamData.members ? [...teamData.members, user.id] : [user.id];
   await updateDoc(teamRef, { members: updatedMembers });
   useTeamStore.getState().updateTeam(teamId, { members: updatedMembers });
+
+  return { success: true, userId: user.id };
 };
 
 // xóa thành viên khỏi team
