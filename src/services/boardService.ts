@@ -151,11 +151,12 @@ export const addBoard = async (
   userId: string
 ) => {
   if (!teamId || !userId) throw new Error("No teamId or userId found");
-  await addDoc(collection(db, `teams/${teamId}/boards`), {
+  const docRef = await addDoc(collection(db, `teams/${teamId}/boards`), {
     ...board,
     createdBy: userId,
     createdAt: Timestamp.now(),
   });
+  return docRef.id
 };
 
 // sửa

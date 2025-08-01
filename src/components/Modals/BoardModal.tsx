@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, UserPlus, Save } from "lucide-react";
-import { addBoard, updateBoard } from "../../services/boardService";
+import {
+  addBoard,
+  deleteBoard,
+  updateBoard,
+} from "../../services/boardService";
 import { useAuth } from "../../hooks/useAuth";
 import type { Board } from "../../types/Board";
 import type { User } from "../../types/User";
@@ -34,12 +38,30 @@ const BoardModal: React.FC<BoardModalProps> = ({
   const [newMember, setNewMember] = useState("");
   const [members, setMembers] = useState<string[]>(board?.members || []);
   const [membersData, setMembersData] = useState<User[]>([]);
-
+  const [createdBoardId, setCreatedBoardId] = useState<string | null>(null);
   useEffect(() => {
     setName(board?.name || "");
     setIsPublic(board?.isPublic ?? true);
     setMembers(board?.members || []);
   }, [board]);
+
+  useEffect(() => {
+    const createBoardIfNeeded = async () => {
+      if (isOpen && !board && !createdBoardId && user?.uid) {
+        const boardData = {
+          name: "Untitled board",
+          isPublic: true,
+          members: [],
+          createdBy: user.uid,
+        };
+        const id = await addBoard(teamId, boardData, user.uid);
+        setCreatedBoardId(id);
+        console.log("chạy if nè");
+        
+      }
+    };
+    createBoardIfNeeded();
+  }, [isOpen, board, createdBoardId, user]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -51,14 +73,29 @@ const BoardModal: React.FC<BoardModalProps> = ({
 
   const handleSave = async () => {
     console.log(useTeamStore.getState().currentTeam);
-    
+
     if (!user?.uid || !teamId) return;
-    const memberSaved = isPublic ? useTeamStore.getState().currentTeam?.members : []; 
-    const boardData = { name, isPublic, members: memberSaved, createdBy: user.uid };
+    const memberSaved = isPublic
+      ? useTeamStore.getState().currentTeam?.members
+      : [];
+    const boardData = {
+      name,
+      isPublic,
+      members: memberSaved,
+      createdBy: user.uid,
+    };
     if (board) {
       await updateBoard(teamId, board.id, boardData);
-    } else {
-      await addBoard(teamId, boardData, user.uid);
+    } else if (createdBoardId) {
+      await updateBoard(teamId, createdBoardId, boardData);
+    }
+    setNewMember("");
+    onClose();
+  };
+
+  const handleCancel = async () => {
+    if (!board && createdBoardId) {
+      await deleteBoard(teamId, createdBoardId);
     }
     setNewMember("");
     onClose();
@@ -67,8 +104,11 @@ const BoardModal: React.FC<BoardModalProps> = ({
   const handleAddMember = async () => {
     if (newMember && !members.includes(newMember)) {
       try {
-        if (board?.id) {
-          const result = await onAddMemberToBoard(board.id, newMember);
+        const boardIdToUse = board?.id || createdBoardId;
+        if (boardIdToUse) {
+          console.log("có id nè");
+          
+          const result = await onAddMemberToBoard(boardIdToUse, newMember);
           if (result.success) {
             setMembers([...members, result.userId]);
             setNewMember("");
@@ -82,9 +122,10 @@ const BoardModal: React.FC<BoardModalProps> = ({
     }
   };
 
-  const handleRemoveMember = (email: string) => {
-    setMembers(members.filter((m) => m !== email));
-    if (board?.id) onRemoveMemberFromBoard(board.id, email);
+  const handleRemoveMember = (userId: string) => {
+    setMembers(members.filter((m) => m !== userId));
+    const boardIdToUse = board?.id || createdBoardId;
+    if (boardIdToUse) onRemoveMemberFromBoard(boardIdToUse, userId);
   };
 
   return (
@@ -184,10 +225,7 @@ const BoardModal: React.FC<BoardModalProps> = ({
             )}
             <div className="flex justify-end gap-2">
               <button
-                onClick={() => {
-                  onClose();
-                  setNewMember("");
-                }}
+                onClick={handleCancel}
                 className="bg-gray-500 text-white p-2 rounded-lg"
               >
                 Cancel
