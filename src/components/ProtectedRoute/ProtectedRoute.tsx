@@ -4,8 +4,6 @@ import Spinner from "../Spinner/Spinner";
 
 const ProtectedRoute = () => {
   const { user, loading } = useAuth();
-  console.log(user);
-  
 
   if (loading) {
     return <div className=""><Spinner /></div>;

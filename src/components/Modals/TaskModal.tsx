@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { Timestamp } from "firebase/firestore";
 import { useTaskStore } from "../../store/taskStore";
-import {
-  addAssignedTask,
-  addTask,
-  updateTask,
-} from "../../services/taskService";
+import { addAssignedTask, addTask, updateTask } from "../../services/taskService";
 import { useAuth } from "../../hooks/useAuth";
 import { type ChecklistItem } from "../../types/ChecklistItem";
 import { useCLIStore } from "../../store/cliStore";
@@ -26,6 +23,7 @@ import {
 } from "@dnd-kit/core";
 import { arrayMove, SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { fadeUp, hoverGrow, tapShrink, staggerContainer, staggerItem } from "../../utils/motionVariants";
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -54,23 +52,24 @@ const SortableChecklistItem = ({
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   return (
-    <li
+    <motion.li
+      variants={staggerItem}
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
-      className="flex justify-between items-center mb-1 cursor-move"
+      className="flex justify-between items-center mb-1 cursor-move text-[#212121] dark:text-[#FBF6E9]"
     >
       <span>{item.text}</span>
-      <button
-        onClick={() =>
-          deleteChecklistItem(teamId, boardId, columnId, taskId, item.id)
-        }
-        className="text-red-500"
+      <motion.button
+        {...hoverGrow}
+        {...tapShrink}
+        onClick={() => deleteChecklistItem(teamId, boardId, columnId, taskId, item.id)}
+        className="text-red-500 hover:text-red-700 transition-colors cursor-pointer"
       >
         X
-      </button>
-    </li>
+      </motion.button>
+    </motion.li>
   );
 };
 
@@ -105,12 +104,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
             : undefined
         );
         setAssignedEmails(currentTask.assignedTo || []);
-        const unsubscribe = subscribeToChecklistItems(
-          teamId,
-          boardId,
-          columnId,
-          taskId
-        );
+        const unsubscribe = subscribeToChecklistItems(teamId, boardId, columnId, taskId);
         return () => unsubscribe();
       } else {
         // add mode
@@ -129,13 +123,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
     if (newEmail && !assignedEmails.includes(newEmail)) {
       try {
         if (taskId) {
-          const result = await addAssignedTask(
-            teamId,
-            boardId,
-            columnId,
-            taskId,
-            newEmail
-          );
+          const result = await addAssignedTask(teamId, boardId, columnId, taskId, newEmail);
           if (result.success) {
             setAssignedEmails([...assignedEmails, result.userId]);
             setNewEmail("");
@@ -145,7 +133,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
         alert(error.message);
       }
     } else {
-      alert("Người dùng đã đảm nhiệm !");
+      alert("Người dùng đã đảm nhiệm!");
     }
   };
 
@@ -167,25 +155,15 @@ const TaskModal: React.FC<TaskModalProps> = ({
     const { active, over } = event;
     if (!active || !over || active.id === over.id) return;
 
-    const oldIndex =
-      itemsByTask[taskId]?.findIndex((item) => item.id === active.id) || 0;
-    const newIndex =
-      itemsByTask[taskId]?.findIndex((item) => item.id === over.id) || 0;
+    const oldIndex = itemsByTask[taskId]?.findIndex((item) => item.id === active.id) || 0;
+    const newIndex = itemsByTask[taskId]?.findIndex((item) => item.id === over.id) || 0;
     const newItems = arrayMove(itemsByTask[taskId] || [], oldIndex, newIndex);
     setItems(taskId, newItems);
-    await moveChecklistItem(
-      teamId!,
-      boardId!,
-      columnId!,
-      taskId!,
-      active.id.toString(),
-      newIndex,
-      checklistItems
-    );
+    await moveChecklistItem(teamId!, boardId!, columnId!, taskId!, active.id.toString(), newIndex, itemsByTask[taskId] || []);
   };
 
   const handleSave = async () => {
-    if (!title) return alert("Missing title");
+    if (!title) return alert("Vui lòng nhập tiêu đề");
 
     const taskData = {
       title,
@@ -210,140 +188,169 @@ const TaskModal: React.FC<TaskModalProps> = ({
       }
       onClose();
     } catch (error) {
-      console.error("Error saving task:", error);
-      alert("Failed to save task. Please try again.");
+      console.error("Lỗi khi lưu công việc:", error);
+      alert("Không thể lưu công việc. Vui lòng thử lại.");
     }
   };
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor)
-  );
-
+  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
   const checklistItems = itemsByTask[taskId] || [];
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg w-96">
-        <h2 className="text-xl font-bold mb-4">
-          {currentTask ? "Edit Task" : "Add Task"}
-        </h2>
-        <div className="mb-4">
-          <label className="block mb-1">Title</label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full p-2 border rounded"
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block mb-1">Description</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full p-2 border rounded"
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block mb-1">Due Date</label>
-          <input
-            type="date"
-            value={dueDate || ""}
-            onChange={(e) => setDueDate(e.target.value)}
-            className="w-full p-2 border rounded"
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block mb-1">Assigned To</label>
-          <div className="flex mb-2">
-            <input
-              type="email"
-              value={newEmail}
-              onChange={(e) => setNewEmail(e.target.value)}
-              className="w-full p-2 border rounded"
-              placeholder="Enter email"
-            />
-            <button
-              onClick={addAssignedEmail}
-              className="ml-2 bg-blue-500 text-white p-2 rounded"
-            >
-              Add
-            </button>
-          </div>
-          <ul>
-            {assignedEmails.map((email) => (
-              <li
-                key={email}
-                className="flex justify-between items-center mb-1"
-              >
-                <span>{email}</span>
-                <button
-                  onClick={() => removeAssignedEmail(email)}
-                  className="text-red-500"
-                >
-                  X
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="mb-4">
-          <label className="block mb-1">Checklist</label>
-          <div className="flex mb-2">
+    <motion.div
+      variants={fadeUp}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
+      <motion.div
+        variants={fadeUp}
+        initial="initial"
+        animate="animate"
+        className="bg-white dark:bg-[#2A2A2A] p-6 rounded-lg w-full max-w-md border border-[#CFFFE2]/20"
+      >
+        <motion.h2
+          variants={fadeUp}
+          className="text-xl sm:text-2xl font-bold mb-4 text-[#212121] dark:text-[#FBF6E9]"
+        >
+          {currentTask ? "Chỉnh sửa công việc" : "Thêm công việc"}
+        </motion.h2>
+        <motion.div variants={staggerContainer} initial="hidden" animate="show">
+          <motion.div variants={staggerItem} className="mb-4">
+            <label className="block mb-1 text-[#212121] dark:text-[#FBF6E9]">
+              Tiêu đề
+            </label>
             <input
               type="text"
-              value={newChecklistText}
-              onChange={(e) => setNewChecklistText(e.target.value)}
-              className="w-full p-2 border rounded"
-              placeholder="Enter checklist item"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full p-2 border border-[#CFFFE2] rounded-lg bg-white dark:bg-[#212121] text-[#212121] dark:text-[#FBF6E9] focus:outline-none focus:border-[#328E6E]"
             />
-            <button
-              onClick={handleAddChecklistItem}
-              className="ml-2 bg-blue-500 text-white p-2 rounded"
+          </motion.div>
+          <motion.div variants={staggerItem} className="mb-4">
+            <label className="block mb-1 text-[#212121] dark:text-[#FBF6E9]">
+              Mô tả
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full p-2 border border-[#CFFFE2] rounded-lg bg-white dark:bg-[#212121] text-[#212121] dark:text-[#FBF6E9] focus:outline-none focus:border-[#328E6E]"
+            />
+          </motion.div>
+          <motion.div variants={staggerItem} className="mb-4">
+            <label className="block mb-1 text-[#212121] dark:text-[#FBF6E9]">
+              Ngày hết hạn
+            </label>
+            <input
+              type="date"
+              value={dueDate || ""}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="w-full p-2 border border-[#CFFFE2] rounded-lg bg-white dark:bg-[#212121] text-[#212121] dark:text-[#FBF6E9] focus:outline-none focus:border-[#328E6E]"
+            />
+          </motion.div>
+          <motion.div variants={staggerItem} className="mb-4">
+            <label className="block mb-1 text-[#212121] dark:text-[#FBF6E9]">
+              Phân công
+            </label>
+            <div className="flex mb-2">
+              <input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                className="w-full p-2 border border-[#CFFFE2] rounded-lg bg-white dark:bg-[#212121] text-[#212121] dark:text-[#FBF6E9] focus:outline-none focus:border-[#328E6E]"
+                placeholder="Nhập email"
+              />
+              <motion.button
+                {...hoverGrow}
+                {...tapShrink}
+                onClick={addAssignedEmail}
+                className="ml-2 bg-[#096B68] text-[#FBF6E9] p-2 rounded-lg hover:bg-[#328E6E] transition-colors cursor-pointer"
+              >
+                Thêm
+              </motion.button>
+            </div>
+            <motion.ul variants={staggerContainer} initial="hidden" animate="show">
+              {assignedEmails.map((email) => (
+                <motion.li
+                  variants={staggerItem}
+                  key={email}
+                  className="flex justify-between items-center mb-1 text-[#212121] dark:text-[#FBF6E9]"
+                >
+                  <span>{email}</span>
+                  <motion.button
+                    {...hoverGrow}
+                    {...tapShrink}
+                    onClick={() => removeAssignedEmail(email)}
+                    className="text-red-500 hover:text-red-700 transition-colors cursor-pointer"
+                  >
+                    X
+                  </motion.button>
+                </motion.li>
+              ))}
+            </motion.ul>
+          </motion.div>
+          <motion.div variants={staggerItem} className="mb-4">
+            <label className="block mb-1 text-[#212121] dark:text-[#FBF6E9]">
+              Danh sách công việc
+            </label>
+            <div className="flex mb-2">
+              <input
+                type="text"
+                value={newChecklistText}
+                onChange={(e) => setNewChecklistText(e.target.value)}
+                className="w-full p-2 border border-[#CFFFE2] rounded-lg bg-white dark:bg-[#212121] text-[#212121] dark:text-[#FBF6E9] focus:outline-none focus:border-[#328E6E]"
+                placeholder="Nhập công việc"
+              />
+              <motion.button
+                {...hoverGrow}
+                {...tapShrink}
+                onClick={handleAddChecklistItem}
+                className="ml-2 bg-[#096B68] text-[#FBF6E9] p-2 rounded-lg hover:bg-[#328E6E] transition-colors cursor-pointer"
+              >
+                Thêm
+              </motion.button>
+            </div>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={checklistItems.map((item) => item.id)}>
+                <motion.ul variants={staggerContainer} initial="hidden" animate="show">
+                  {checklistItems.map((item) => (
+                    <SortableChecklistItem
+                      key={item.id}
+                      item={item}
+                      taskId={taskId}
+                      columnId={columnId}
+                      teamId={teamId}
+                      boardId={boardId}
+                    />
+                  ))}
+                </motion.ul>
+              </SortableContext>
+            </DndContext>
+          </motion.div>
+          <motion.div variants={staggerItem} className="flex justify-end gap-4">
+            <motion.button
+              {...hoverGrow}
+              {...tapShrink}
+              onClick={onClose}
+              className="bg-[#212121] dark:bg-[#2A2A2A] text-[#FBF6E9] p-2 rounded-lg hover:bg-[#328E6E] transition-colors cursor-pointer"
             >
-              Add
-            </button>
-          </div>
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext items={checklistItems.map((item) => item.id)}>
-              <ul>
-                {checklistItems.map((item) => (
-                  <SortableChecklistItem
-                    key={item.id}
-                    item={item}
-                    taskId={taskId}
-                    columnId={columnId}
-                    teamId={teamId}
-                    boardId={boardId}
-                  />
-                ))}
-              </ul>
-            </SortableContext>
-          </DndContext>
-        </div>
-        <div className="flex justify-end space-x-4">
-          <button
-            onClick={onClose}
-            className="bg-gray-500 text-white p-2 rounded"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            className="bg-green-500 text-white p-2 rounded"
-          >
-            Save
-          </button>
-        </div>
-      </div>
-    </div>
+              Hủy
+            </motion.button>
+            <motion.button
+              {...hoverGrow}
+              {...tapShrink}
+              onClick={handleSave}
+              className="bg-[#096B68] text-[#FBF6E9] p-2 rounded-lg hover:bg-[#328E6E] transition-colors cursor-pointer"
+            >
+              Lưu
+            </motion.button>
+          </motion.div>
+        </motion.div>
+      </motion.div>
+    </motion.div>
   );
 };
 

@@ -24,7 +24,6 @@ export const fetchBoards = async (
   userId: string | null
 ) => {
   if (!teamId || !userEmail || !userId) {
-    console.log("No teamId, userEmail, or userId, setting boards to empty");
     useBoardStore.getState().setBoards([]);
     return;
   }
@@ -58,7 +57,6 @@ export const fetchBoards = async (
   const uniqueBoards = Array.from(
     new Map(allBoards.map((board) => [board.id, board])).values()
   );
-  console.log("Fetched unique boards:", uniqueBoards);
   useBoardStore.getState().setBoards(uniqueBoards);
 };
 
@@ -70,9 +68,6 @@ export const subscribeToBoards = (
   callback?: () => void
 ) => {
   if (!teamId || !userEmail || !userId) {
-    console.log(
-      "No teamId, userEmail, or userId, setting boards to empty in subscribe"
-    );
     useBoardStore.getState().setBoards([]);
     return () => {};
   }
@@ -87,7 +82,6 @@ export const subscribeToBoards = (
     const uniqueBoards = Array.from(
       new Map(allBoards.map((board) => [board.id, board])).values()
     );
-    console.log("Subscribed unique boards:", uniqueBoards);
     useBoardStore.getState().setBoards(uniqueBoards);
     if (callback) callback();
   };

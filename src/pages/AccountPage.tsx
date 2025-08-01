@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 import { useAuth } from "../hooks/useAuth";
 import { fetchUserById, updateUser, uploadImageToCloudinary } from "../services/userService";
 import { type User } from "../types/User";
+import { fadeUp, hoverGrow, tapShrink, staggerContainer, staggerItem } from "../utils/motionVariants";
 
 const AccountPage: React.FC = () => {
   const { user, loading } = useAuth();
@@ -10,15 +12,9 @@ const AccountPage: React.FC = () => {
   const [editValue, setEditValue] = useState<string>("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-
-  
-
   useEffect(() => {
     const loadUser = async () => {
-        console.log(user);
       if (user && !loading) {
-        console.log("chạy được");
-        
         const fetchedUser = await fetchUserById(user.uid);
         setCurrentUser(fetchedUser);
       }
@@ -53,82 +49,112 @@ const AccountPage: React.FC = () => {
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = await uploadImageToCloudinary(file);
+    if (url) {
+      await updateUser(user?.uid ?? "", { avatarUrl: url });
+      setCurrentUser((prev) => (prev ? { ...prev, avatarUrl: url } : prev));
+    }
+  };
 
-  const url = await uploadImageToCloudinary(file);
-  if (url) {
-    await updateUser(user?.uid ?? "", {avatarUrl: url})
-  }
-};
-
-  if (loading || !currentUser) return <div>Loading...</div>;
+  if (loading || !currentUser) return <div className="text-[#212121] dark:text-[#FBF6E9]">Đang tải...</div>;
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow">
-      <div className="flex space-x-6">
+    <motion.div
+      variants={fadeUp}
+      initial="initial"
+      animate="animate"
+      className="p-6 bg-[#FDFAF6] dark:bg-[#212121] rounded-lg shadow-md border border-[#CFFFE2]/20"
+    >
+      <motion.div variants={staggerContainer} initial="hidden" animate="show" className="flex flex-col sm:flex-row gap-6">
         {/* Avatar Section */}
-        <div className="flex-1">
+        <motion.div variants={staggerItem} className="flex-1 flex flex-col items-center">
           <img
             src={currentUser.avatarUrl || "https://via.placeholder.com/150"}
             alt="Avatar"
             className="w-40 h-40 rounded-full object-cover mb-4"
           />
-          <input className="bg-amber-300 border" type="file" onChange={handleFileChange} />
-        </div>
+          <motion.input
+            {...hoverGrow}
+            {...tapShrink}
+            type="file"
+            onChange={handleFileChange}
+            className="bg-[#096B68] text-[#FBF6E9] border border-[#CFFFE2] rounded-lg p-2 hover:bg-[#328E6E] transition-colors cursor-pointer"
+          />
+        </motion.div>
+
         {/* Info Section */}
-        <div className="flex-1">
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">Display Name</label>
+        <motion.div variants={staggerContainer} initial="hidden" animate="show" className="flex-1">
+          <motion.div variants={staggerItem} className="mb-4">
+            <label className="block text-sm font-medium text-[#212121] dark:text-[#FBF6E9]">
+              Tên hiển thị
+            </label>
             {editField === "displayName" ? (
-              <input
+              <motion.input
+                variants={fadeUp}
+                initial="initial"
+                animate="animate"
                 ref={inputRef}
                 type="text"
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
                 onKeyPress={(e) => handleKeyPress(e, "displayName")}
                 onBlur={() => handleBlur("displayName")}
-                className="mt-1 p-2 border rounded w-full"
+                className="mt-1 p-2 border border-[#CFFFE2] rounded-lg bg-white dark:bg-[#212121] text-[#212121] dark:text-[#FBF6E9] focus:outline-none focus:border-[#328E6E] w-full"
               />
             ) : (
               <div className="mt-1 flex items-center">
-                <span className="flex-1">{currentUser.displayName}</span>
-                <button
+                <span className="flex-1 text-[#212121] dark:text-[#FBF6E9]">
+                  {currentUser.displayName}
+                </span>
+                <motion.button
+                  {...hoverGrow}
+                  {...tapShrink}
                   onClick={() => handleEdit("displayName", currentUser.displayName || "")}
-                  className="ml-2 text-gray-500 hover:text-gray-700"
+                  className="ml-2 text-[#096B68] hover:text-[#328E6E] transition-colors"
                 >
                   ✎
-                </button>
+                </motion.button>
               </div>
             )}
-          </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">Email</label>
+          </motion.div>
+          <motion.div variants={staggerItem} className="mb-4">
+            <label className="block text-sm font-medium text-[#212121] dark:text-[#FBF6E9]">
+              Email
+            </label>
             {editField === "email" ? (
-              <input
+              <motion.input
+                variants={fadeUp}
+                initial="initial"
+                animate="animate"
                 ref={inputRef}
                 type="email"
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
                 onKeyPress={(e) => handleKeyPress(e, "email")}
                 onBlur={() => handleBlur("email")}
-                className="mt-1 p-2 border rounded w-full"
+                className="mt-1 p-2 border border-[#CFFFE2] rounded-lg bg-white dark:bg-[#212121] text-[#212121] dark:text-[#FBF6E9] focus:outline-none focus:border-[#328E6E] w-full"
               />
             ) : (
               <div className="mt-1 flex items-center">
-                <span className="flex-1">{currentUser.email}</span>
-                <button
+                <span className="flex-1 text-[#212121] dark:text-[#FBF6E9]">
+                  {currentUser.email}
+                </span>
+                <motion.button
+                  {...hoverGrow}
+                  {...tapShrink}
                   onClick={() => handleEdit("email", currentUser.email || "")}
-                  className="ml-2 text-gray-500 hover:text-gray-700"
+                  className="ml-2 text-[#096B68] hover:text-[#328E6E] transition-colors"
                 >
                   ✎
-                </button>
+                </motion.button>
               </div>
             )}
-          </div>
-        </div>
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      </motion.div>
+    </motion.div>
   );
 };
 

@@ -9,8 +9,9 @@ import { addMemberToTeam, removeMemberFromTeam } from '../services/teamService';
 import { NavLink } from 'react-router-dom';
 import BoardModal from '../components/Modals/BoardModal';
 import type { Board } from '../types/Board';
-import {  fetchUserById, fetchUsersByIds } from '../services/userService';
+import { fetchUserById, fetchUsersByIds } from '../services/userService';
 import type { User } from '../types/User';
+import { fadeUp, hoverGrow, tapShrink, staggerContainer, staggerItem } from '../utils/motionVariants';
 
 const TeamPage = () => {
   const currentTeam = useTeamStore((s) => s.currentTeam);
@@ -19,34 +20,32 @@ const TeamPage = () => {
   const [newMember, setNewMember] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState<string | null>(null);
-  const [leaderName, setLeaderName] = useState("")
+  const [leaderName, setLeaderName] = useState("");
   const [membersData, setMembersData] = useState<User[]>([]);
 
   const members = currentTeam?.members || [];
   useEffect(() => {
     if (!loading && currentTeam?.id && user?.email && user?.uid) {
       fetchBoards(currentTeam.id, user.email, user.uid);
-      
       const unsubscribe = subscribeToBoards(currentTeam.id, user.email, user.uid);
       return () => unsubscribe();
     }
   }, [currentTeam?.id, user?.email, user?.uid, loading]);
-  
-  const memberlist = useMemo(() => Object.keys(members).sort(), [members]);
+
+  const memberList = useMemo(() => Object.keys(members).sort(), [members]);
   useEffect(() => {
     const fetchLeaderData = async () => {
-      const leader = await fetchUserById(currentTeam?.ownerId ?? "")
-      setLeaderName(leader?.displayName ?? "")
-    }
+      const leader = await fetchUserById(currentTeam?.ownerId ?? "");
+      setLeaderName(leader?.displayName ?? "");
+    };
     const fetchMembersData = async () => {
       const membersData = await fetchUsersByIds(members);
-      setMembersData(membersData)
-    }
+      setMembersData(membersData);
+    };
     fetchLeaderData();
     fetchMembersData();
-  }, [currentTeam, memberlist])
+  }, [currentTeam, memberList]);
 
-  
   const handleAddMemberToTeam = async () => {
     if (newMember && currentTeam?.id && !members.includes(newMember)) {
       try {
@@ -64,18 +63,17 @@ const TeamPage = () => {
     }
   };
 
-const handleAddMemberToBoard = async (boardId: string, email: string) => {
-  if (!currentTeam?.id) {
-    throw new Error("Team ID not found");
-
-  }
-  try {
-    const result = await addMemberToBoard(currentTeam.id, boardId, email);
-    return result; 
-  } catch (error: any) {
-    throw error; 
-  }
-};
+  const handleAddMemberToBoard = async (boardId: string, email: string) => {
+    if (!currentTeam?.id) {
+      throw new Error("Team ID not found");
+    }
+    try {
+      const result = await addMemberToBoard(currentTeam.id, boardId, email);
+      return result;
+    } catch (error: any) {
+      throw error;
+    }
+  };
 
   const handleRemoveMemberFromBoard = async (boardId: string, email: string) => {
     if (currentTeam?.id) {
@@ -104,139 +102,159 @@ const handleAddMemberToBoard = async (boardId: string, email: string) => {
     setIsDropdownOpen(isDropdownOpen === boardId ? null : boardId);
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div className="text-[#212121] dark:text-[#FBF6E9] text-center py-8">Loading...</div>;
 
   return (
-    <div className="flex space-x-8">
+    <div className="flex flex-col sm:flex-row gap-6 p-4 bg-[#FDFAF6] dark:bg-[#212121] min-h-screen">
+      {/* DANH SÁCH THÀNH VIÊN */}
       <motion.div
-        initial={{ x: -100, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="flex flex-col space-y-4 px-8 bg-red-400 h-[500px] border rounded-tr-2xl rounded-br-2xl"
+        variants={fadeUp}
+        initial="initial"
+        animate="animate"
+        className="w-full sm:w-64 bg-[#096B68] p-6 rounded-2xl flex flex-col gap-4"
       >
-        {/* DANH SÁCH THÀNH VIÊN */}
         <motion.span
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className=""
+          variants={fadeUp}
+          className="text-lg font-semibold text-[#FBF6E9]"
         >
           Danh sách thành viên
         </motion.span>
-        <ul className="space-y-4 flex flex-col">
+        <ul className="space-y-3">
           {membersData.map((member) => (
             <motion.li
               key={member.id}
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.3 }}
-              className="flex items-center space-x-4 cursor-pointer"
+              variants={staggerItem}
+              className="flex items-center justify-between text-[#FBF6E9]"
             >
-              <img src={member.avatarUrl} className="size-6" alt="hinhanh" />
-              <span className="">{member.displayName}</span>
-              <button onClick={() => handleRemoveMemberFromTeam(member.id)} className="cursor-pointer">
-                <X />
-              </button>
+              <div className="flex items-center gap-2">
+                <img src={member.avatarUrl} className="size-6 rounded-full" alt="avatar" />
+                <span className="text-sm">{member.displayName}</span>
+              </div>
+              <motion.button
+                {...hoverGrow}
+                {...tapShrink}
+                onClick={() => handleRemoveMemberFromTeam(member.id)}
+                className="text-[#FBF6E9] hover:text-red-500 cursor-pointer"
+              >
+                <X size={16} />
+              </motion.button>
             </motion.li>
           ))}
         </ul>
       </motion.div>
+
+      {/* DANH SÁCH BOARD */}
       <motion.div
-        initial={{ x: 100, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="flex flex-col space-y-8 pr-4 flex-1"
+        variants={fadeUp}
+        initial="initial"
+        animate="animate"
+        className="flex-1 flex flex-col gap-6"
       >
         <motion.div
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-          className="text-3xl font-bold text-center"
+          variants={fadeUp}
+          className="text-2xl sm:text-3xl font-bold text-[#212121] dark:text-[#FBF6E9] text-center"
         >
           {currentTeam?.name}
         </motion.div>
         <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
-          className="flex justify-between items-center"
+          variants={fadeUp}
+          className="flex flex-col sm:flex-row justify-between items-center gap-4"
         >
-          <span className="">
+          <span className="text-[#212121] dark:text-[#FBF6E9]">
             <span className="font-bold">Trưởng nhóm: </span>
             {leaderName}
           </span>
-          <div className="flex items-center space-x-4 p-2">
+          <div className="flex items-center gap-2">
             <input
-              className="border rounded-2xl w-72 h-10 py-1 px-2"
+              className="border border-[#CFFFE2] rounded-lg w-full sm:w-64 h-10 py-1 px-3 text-[#212121] dark:text-[#FBF6E9] bg-white dark:bg-[#2A2A2A] focus:outline-none focus:border-[#328E6E]"
               type="email"
               value={newMember}
               onChange={(e) => setNewMember(e.target.value)}
-              placeholder="Nhập vào email người mới"
+              placeholder="Nhập email người mới"
             />
             <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
+              {...hoverGrow}
+              {...tapShrink}
               onClick={handleAddMemberToTeam}
-              className="bg-blue-600 text-white p-2 rounded-full"
+              className="bg-[#096B68] text-[#FBF6E9] p-2 rounded-lg hover:bg-[#328E6E] transition-colors cursor-pointer"
             >
-              <Plus />
+              <Plus size={18} />
             </motion.button>
           </div>
         </motion.div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {boards.map((board, index) => (
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+        >
+          {boards.map((board) => (
             <motion.div
               key={board.id}
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.1 * index, duration: 0.3 }}
-              className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md relative"
+              variants={staggerItem}
+              className="bg-white dark:bg-[#2A2A2A] p-4 rounded-lg shadow-md relative border border-[#CFFFE2]/20"
             >
-              <NavLink to={`/board/${board.id}`} onClick={() => {setCurrentBoard(board)}} className="block mb-2 text-lg font-semibold">
+              <NavLink
+                to={`/board/${board.id}`}
+                onClick={() => setCurrentBoard(board)}
+                className="block mb-2 text-lg font-semibold text-[#212121] dark:text-[#FBF6E9] hover:text-[#328E6E] transition-colors"
+              >
                 {board.name}
               </NavLink>
               <div className="relative">
-                <button
+                <motion.button
+                  {...hoverGrow}
+                  {...tapShrink}
                   onClick={() => handleOptionsClick(board.id)}
-                  className="absolute bottom-2 right-2 text-gray-500 hover:text-gray-700"
+                  className="absolute bottom-2 right-2 text-[#212121] dark:text-[#FBF6E9] hover:text-[#328E6E] cursor-pointer"
                 >
                   <MoreVertical size={20} />
-                </button>
+                </motion.button>
                 {isDropdownOpen === board.id && (
-                  <div className="absolute bottom-8 right-0 bg-white dark:bg-gray-800 border rounded-lg shadow-md w-32">
-                    <button
+                  <motion.div
+                    variants={fadeUp}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    className="absolute bottom-10 right-0 bg-white dark:bg-[#2A2A2A] border border-[#CFFFE2]/20 rounded-lg shadow-md w-32 z-10"
+                  >
+                    <motion.button
+                      {...hoverGrow}
+                      {...tapShrink}
                       onClick={() => handleEditBoard(board)}
-                      className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="w-full text-left p-2 text-[#212121] dark:text-[#FBF6E9] hover:bg-[#CFFFE2]/10 flex items-center gap-2 cursor-pointer"
                     >
-                      <Edit size={16} className="inline mr-2" /> Sửa
-                    </button>
-                    <button
+                      <Edit size={16} /> Sửa
+                    </motion.button>
+                    <motion.button
+                      {...hoverGrow}
+                      {...tapShrink}
                       onClick={() => handleDeleteBoard(board.id)}
-                      className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-red-500"
+                      className="w-full text-left p-2 text-red-500 hover:bg-[#CFFFE2]/10 flex items-center gap-2 cursor-pointer"
                     >
-                      <Trash2 size={16} className="inline mr-2" /> Xóa
-                    </button>
-                  </div>
+                      <Trash2 size={16} /> Xóa
+                    </motion.button>
+                  </motion.div>
                 )}
               </div>
             </motion.div>
           ))}
           <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.1 * (boards.length + 1), duration: 0.3 }}
-            className="bg-gray-200 p-4 rounded-lg shadow-md flex items-center justify-center cursor-pointer"
+            variants={staggerItem}
+            {...hoverGrow}
+            {...tapShrink}
+            className="bg-[#CFFFE2]/20 p-4 rounded-lg shadow-md flex items-center justify-center cursor-pointer hover:bg-[#CFFFE2]/30 transition-colors"
             onClick={() => {
               setCurrentBoard(null);
               setIsModalOpen(true);
             }}
           >
-            <span className="text-gray-600">Tạo Board Mới</span>
+            <span className="text-[#212121] dark:text-[#FBF6E9] font-medium">Tạo Board Mới</span>
           </motion.div>
-        </div>
+        </motion.div>
         <BoardModal
           isOpen={isModalOpen}
-          onClose={() => { setIsModalOpen(false) }}
+          onClose={() => setIsModalOpen(false)}
           teamId={currentTeam?.id || ''}
           board={useBoardStore.getState().currentBoard ?? undefined}
           onAddMemberToBoard={handleAddMemberToBoard}

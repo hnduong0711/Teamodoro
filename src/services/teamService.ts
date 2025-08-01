@@ -7,7 +7,6 @@ import { fetchUserByEmail } from './userService';
 // lấy dữ liệu 1 lần 
 export const fetchTeams = async (userId: string | null | null) => {
   if (!userId) {
-    console.log("No userId or email, setting teams to empty");
     useTeamStore.getState().setTeams([]);
     return;
   }
@@ -22,14 +21,12 @@ export const fetchTeams = async (userId: string | null | null) => {
 
   const allTeams = [...ownerTeams, ...memberTeams];
   const uniqueTeams = Array.from(new Map(allTeams.map((team) => [team.id, team])).values());
-  // console.log("Fetched unique teams:", uniqueTeams);
   useTeamStore.getState().setTeams(uniqueTeams);
 };
 
 // theo dõi dữ liệu
 export const subscribeToTeams = (userId: string | null, callback?: () => void) => {
   if (!userId) {
-    console.log("No userId or email, setting teams to empty in subscribe");
     useTeamStore.getState().setTeams([]);
     return () => {};
   }

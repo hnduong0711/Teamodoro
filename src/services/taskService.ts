@@ -16,7 +16,6 @@ import { useTaskStore } from "../store/taskStore";
 import { type Task } from "../types/Task";
 import { fetchUserByEmail } from "./userService";
 import type { Board } from "../types/Board";
-import { useTeamStore } from "../store/teamStore";
 
 // lấy dữ liệu 1 lần all task
 export const fetchTasks = async (
@@ -25,10 +24,6 @@ export const fetchTasks = async (
   columnId: string
 ) => {
   if (!teamId || !boardId || !columnId) {
-    console.log(
-      "No teamId, boardId, or columnId, setting tasks to empty for column:",
-      columnId
-    );
     useTaskStore.getState().setTasks(columnId, []);
     return;
   }
@@ -42,7 +37,6 @@ export const fetchTasks = async (
   const tasks = snapshot.docs.map(
     (doc) => ({ id: doc.id, ...doc.data() } as Task)
   );
-  console.log("Fetched tasks for column:", columnId, tasks);
   useTaskStore.getState().setTasks(columnId, tasks);
 };
 
@@ -72,10 +66,6 @@ export const subscribeToTasks = (
   callback?: () => void
 ) => {
   if (!teamId || !boardId || !columnId) {
-    console.log(
-      "No teamId, boardId, or columnId, setting tasks to empty for column:",
-      columnId
-    );
     useTaskStore.getState().setTasks(columnId, []);
     return () => {};
   }
@@ -91,7 +81,6 @@ export const subscribeToTasks = (
       const tasks = snapshot.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() } as Task)
       );
-      console.log("Subscribed tasks for column:", columnId, tasks);
       useTaskStore.getState().setTasks(columnId, tasks);
       if (callback) callback();
     },

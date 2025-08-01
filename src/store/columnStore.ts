@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { type Column } from '../types/Column';
-import { arrayMove } from '@dnd-kit/sortable';
 
 interface ColumnState {
   columns: Column[];
@@ -9,7 +8,6 @@ interface ColumnState {
   addColumn: (column: Omit<Column, 'id' | 'position'> & { createdBy: string }) => void;
   updateColumn: (columnId: string, updates: Partial<Column>) => void;
   deleteColumn: (columnId: string) => void;
-  reorderColumns: (activeId: string, overId: string) => void;
 }
 
 export const useColumnStore = create(
@@ -28,15 +26,6 @@ export const useColumnStore = create(
       deleteColumn: (columnId) => set((state) => ({
         columns: state.columns.filter((c) => c.id !== columnId),
       })),
-      reorderColumns: (activeId, overId) => set((state) => {
-        const activeIndex = state.columns.findIndex((c) => c.id === activeId);
-        const overIndex = state.columns.findIndex((c) => c.id === overId);
-        if (activeIndex !== -1 && overIndex !== -1) {
-          const newColumns = arrayMove(state.columns, activeIndex, overIndex);
-          return { columns: newColumns.map((col, index) => ({ ...col, position: index })) };
-        }
-        return state;
-      }),
     }),
     { name: 'column-storage' }
   )

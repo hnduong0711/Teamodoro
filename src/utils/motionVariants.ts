@@ -57,7 +57,7 @@ export const scaleIn: Variants = {
 export const hoverGrow = {
   whileHover: { scale: 1.05 },
   transition: { type: 'spring', stiffness: 300 }
-}
+} as const;
 
 export const tapShrink = {
   whileTap: { scale: 0.95 }

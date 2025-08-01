@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useWeeklyTaskStore } from "../store/weeklyTaskStore";
 import { fetchTasksByBoard } from "../services/weeklyTaskService";
 import { type Task } from "../types/Task";
 import { CheckCircle, Circle } from "lucide-react";
 import { useTeamStore } from "../store/teamStore";
+import { fadeUp, hoverGrow, tapShrink, staggerContainer, staggerItem } from "../utils/motionVariants";
 
 const WeeklyView: React.FC = () => {
   const { boardId } = useParams<{ boardId: string }>();
@@ -91,26 +93,40 @@ const WeeklyView: React.FC = () => {
   };
 
   return (
-    <div className="p-4 bg-gray-100 min-h-screen">
-      <div className="flex justify-between items-center mb-4">
-        <button
+    <div className="p-4 sm:p-6 bg-[#FDFAF6] dark:bg-[#212121] min-h-screen">
+      <motion.div
+        variants={fadeUp}
+        initial="initial"
+        animate="animate"
+        className="flex justify-between items-center mb-6"
+      >
+        <motion.button
+          {...hoverGrow}
+          {...tapShrink}
           onClick={prevWeek}
-          className="px-4 py-2 bg-blue-500 text-white rounded"
+          className="px-4 py-2 bg-[#096B68] text-[#FBF6E9] rounded-lg hover:bg-[#328E6E] transition-colors cursor-pointer"
         >
-          Previous
-        </button>
-        <h2 className="text-2xl font-bold">
-          Week of {(filteredWeekStart || currentWeekStart).toLocaleDateString()}
+          Tuần trước
+        </motion.button>
+        <h2 className="text-2xl sm:text-3xl font-bold text-[#212121] dark:text-[#FBF6E9]">
+          Tuần bắt đầu {(filteredWeekStart || currentWeekStart).toLocaleDateString('vi-VN')}
         </h2>
-        <button
+        <motion.button
+          {...hoverGrow}
+          {...tapShrink}
           onClick={nextWeek}
-          className="px-4 py-2 bg-blue-500 text-white rounded"
+          className="px-4 py-2 bg-[#096B68] text-[#FBF6E9] rounded-lg hover:bg-[#328E6E] transition-colors cursor-pointer"
         >
-          Next
-        </button>
-      </div>
-      {/* filter */}
-      <div className="mb-4">
+          Tuần sau
+        </motion.button>
+      </motion.div>
+      {/* Filter */}
+      <motion.div
+        variants={fadeUp}
+        initial="initial"
+        animate="animate"
+        className="mb-6"
+      >
         <select
           onChange={(e) => {
             const selectedWeek = weeks.find(
@@ -120,27 +136,34 @@ const WeeklyView: React.FC = () => {
             );
             setFilteredWeekStart(selectedWeek ? selectedWeek.start : null);
           }}
-          className="p-2 border rounded"
+          className="p-2 border border-[#CFFFE2] rounded-lg bg-white dark:bg-[#212121] text-[#212121] dark:text-[#FBF6E9] focus:outline-none focus:border-[#328E6E] w-full sm:w-auto"
         >
-          <option value="">Select Week</option>
+          <option value="">Chọn tuần</option>
           {weeks.map((week, index) => (
             <option key={index} value={week.start.toISOString()}>
-              {`${week.start.toLocaleDateString()} - ${week.end.toLocaleDateString()}`}
+              {`${week.start.toLocaleDateString('vi-VN')} - ${week.end.toLocaleDateString('vi-VN')}`}
             </option>
           ))}
         </select>
-      </div>
-      <div
-        className="grid grid-cols-7 gap-2 relative"
+      </motion.div>
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 sm:grid-cols-7 gap-2 relative"
         style={{ minHeight: "400px" }}
       >
         {weekDays.map((day, index) => (
-          <div key={index} className="bg-white p-2 rounded shadow text-center">
-            {day.toLocaleDateString("en-US", {
+          <motion.div
+            key={index}
+            variants={staggerItem}
+            className="bg-white dark:bg-[#2A2A2A] p-2 rounded-lg shadow-md text-center text-[#212121] dark:text-[#FBF6E9] border border-[#CFFFE2]/20"
+          >
+            {day.toLocaleDateString("vi-VN", {
               weekday: "short",
               day: "numeric",
             })}
-          </div>
+          </motion.div>
         ))}
         {tasks.map((task, taskIndex) => {
           const position = getTaskPosition(task);
@@ -148,7 +171,6 @@ const WeeklyView: React.FC = () => {
           const { startDay, endDay } = position;
           const width = ((endDay - startDay + 1) / 7) * 100;
 
-          // tính số thứ tự chồng cho ngày bắt đầu
           const overlapIndex = tasks.filter((t, i) => {
             const pos = getTaskPosition(t);
             return (
@@ -160,9 +182,10 @@ const WeeklyView: React.FC = () => {
           }).length;
 
           return (
-            <div
+            <motion.div
               key={task.id}
-              className="absolute bg-blue-500 p-1 rounded text-xs text-white shadow-md"
+              variants={staggerItem}
+              className="absolute bg-[#096B68] p-2 rounded-lg text-xs text-[#FBF6E9] shadow-md flex items-center justify-between"
               style={{
                 left: `${(startDay / 7) * 100}%`,
                 width: `${width}%`,
@@ -170,18 +193,16 @@ const WeeklyView: React.FC = () => {
                 top: `${overlapIndex * 50 + 60}px`,
               }}
             >
-              <div className="flex justify-between items-center w-full">
-                <span className="truncate">{task.title}</span>
-                {task.isDone ? (
-                  <CheckCircle className="w-4 h-4 text-green-300 ml-1" />
-                ) : (
-                  <Circle className="w-4 h-4 text-red-300 ml-1" />
-                )}
-              </div>
-            </div>
+              <span className="truncate">{task.title}</span>
+              {task.isDone ? (
+                <CheckCircle className="w-4 h-4 text-[#CFFFE2] ml-1" />
+              ) : (
+                <Circle className="w-4 h-4 text-red-300 ml-1" />
+              )}
+            </motion.div>
           );
         })}
-      </div>
+      </motion.div>
     </div>
   );
 };

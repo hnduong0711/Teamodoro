@@ -6,7 +6,6 @@ import { type ChecklistItem } from '../types/ChecklistItem';
 // lấy dữ liệu 1 lần 
 export const fetchChecklistItems = async (teamId: string, boardId: string, columnId: string, taskId: string) => {
   if (!teamId || !boardId || !columnId || !taskId) {
-    console.log("No teamId, boardId, columnId, or taskId, setting items to empty for task:", taskId);
     useCLIStore.getState().setItems(taskId, []);
     return;
   }
@@ -14,15 +13,13 @@ export const fetchChecklistItems = async (teamId: string, boardId: string, colum
   const itemsCollection = collection(db, `teams/${teamId}/boards/${boardId}/columns/${columnId}/tasks/${taskId}/checkListItem`);
   const itemsQuery = query(itemsCollection, orderBy('position'));
   const snapshot = await getDocs(itemsQuery);
-  const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as ChecklistItem));
-  console.log("Fetched checklist items for task:", taskId, items);
+  const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as ChecklistItem))
   useCLIStore.getState().setItems(taskId, items);
 };
 
 // theo dõi dữ liệu
 export const subscribeToChecklistItems = (teamId: string, boardId: string, columnId: string, taskId: string, callback?: () => void) => {
   if (!teamId || !boardId || !columnId || !taskId) {
-    console.log("No teamId, boardId, columnId, or taskId, setting items to empty for task:", taskId);
     useCLIStore.getState().setItems(taskId, []);
     return () => {};
   }
@@ -31,7 +28,6 @@ export const subscribeToChecklistItems = (teamId: string, boardId: string, colum
   const itemsQuery = query(itemsCollection, orderBy('position'));
   const unsubscribe = onSnapshot(itemsQuery, (snapshot) => {
     const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as ChecklistItem));
-    console.log("Subscribed checklist items for task:", taskId, items);
     useCLIStore.getState().setItems(taskId, items);
     if (callback) callback();
   }, (error) => console.error('Error subscribing to checklist items for task:', taskId, error));

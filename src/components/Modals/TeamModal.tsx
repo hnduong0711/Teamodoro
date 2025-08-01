@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, UserPlus, Trash2, Save } from "lucide-react";
 import {
@@ -13,6 +13,7 @@ import { useAuth } from "../../hooks/useAuth";
 import type { Team } from "../../types/Team";
 import type { User } from "../../types/User";
 import { fetchUsersByIds } from "../../services/userService";
+import { fade, slideFromBottom, hoverGrow, tapShrink } from "../../utils/motionVariants";
 
 interface TeamModalProps {
   isOpen: boolean;
@@ -26,8 +27,8 @@ const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, team }) => {
   const [newMember, setNewMember] = useState("");
   const [members, setMembers] = useState<string[]>(team?.members || []);
   const [membersData, setMembersData] = useState<User[]>([]);
-
   const [createdTeamId, setCreatedTeamId] = useState<string | null>(null);
+
   useEffect(() => {
     const fetchUserData = async () => {
       const membersData = await fetchUsersByIds(members);
@@ -111,41 +112,45 @@ const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, team }) => {
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          variants={fade}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className="fixed inset-0 bg-[#212121]/50 flex items-center justify-center z-50"
         >
           <motion.div
-            initial={{ y: 50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 50, opacity: 0 }}
-            className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md"
+            variants={slideFromBottom}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="bg-[#FDFAF6] dark:bg-[#2A2A2A] p-6 rounded-lg shadow-lg w-full max-w-md mx-4"
           >
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">
+              <h2 className="text-xl font-bold text-[#212121] dark:text-[#FDFAF6]">
                 {team ? "Sửa Team" : "Thêm Team"}
               </h2>
-              <button
-                onClick={onClose}
-                className="text-gray-500 hover:text-gray-700"
+              <motion.button
+                {...hoverGrow}
+                {...tapShrink}
+                onClick={handleClose}
+                className="text-[#212121] dark:text-[#FDFAF6] hover:text-[#328E6E] cursor-pointer"
               >
                 <X size={24} />
-              </button>
+              </motion.button>
             </div>
             <div className="mb-4">
-              <label className="block text-gray-700 dark:text-gray-200 mb-2">
+              <label className="block text-[#212121] dark:text-[#FDFAF6] mb-2 font-medium">
                 Tên Team
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:text-white"
+                className="w-full p-2 border border-[#CFFFE2] rounded-lg bg-white dark:bg-[#212121] text-[#212121] dark:text-[#FDFAF6] focus:outline-none focus:border-[#328E6E]"
               />
             </div>
             <div className="mb-4">
-              <label className="block text-gray-700 dark:text-gray-200 mb-2">
+              <label className="block text-[#212121] dark:text-[#FDFAF6] mb-2 font-medium">
                 Thêm Member (ID)
               </label>
               <div className="flex gap-2">
@@ -153,48 +158,58 @@ const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, team }) => {
                   type="text"
                   value={newMember}
                   onChange={(e) => setNewMember(e.target.value)}
-                  className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:text-white"
+                  className="w-full p-2 border border-[#CFFFE2] rounded-lg bg-white dark:bg-[#212121] text-[#212121] dark:text-[#FDFAF6] focus:outline-none focus:border-[#328E6E]"
                 />
-                <button
+                <motion.button
+                  {...hoverGrow}
+                  {...tapShrink}
                   onClick={() => handleAddMember(newMember)}
-                  className="bg-blue-600 text-white p-2 rounded-lg"
+                  className="bg-[#096B68] text-[#FDFAF6] p-2 rounded-lg hover:bg-[#328E6E] transition-colors cursor-pointer"
                 >
                   <UserPlus size={18} />
-                </button>
+                </motion.button>
               </div>
             </div>
             <div className="mb-4">
-              <label className="block text-gray-700 dark:text-gray-200 mb-2">
+              <label className="block text-[#212121] dark:text-[#FDFAF6] mb-2 font-medium">
                 Members
               </label>
-              <ul className="list-disc pl-5">
+              <ul className="space-y-2">
                 {membersData.map((memberEmail) => (
-                  <li key={memberEmail.id} className="flex justify-between">
+                  <li
+                    key={memberEmail.id}
+                    className="flex justify-between items-center text-[#212121] dark:text-[#FDFAF6]"
+                  >
                     {memberEmail.displayName}
-                    <button
+                    <motion.button
+                      {...hoverGrow}
+                      {...tapShrink}
                       onClick={() => handleRemoveMember(memberEmail.id)}
-                      className="text-red-500 hover:text-red-700"
+                      className="text-red-500 hover:text-red-700 cursor-pointer"
                     >
                       <Trash2 size={16} />
-                    </button>
+                    </motion.button>
                   </li>
                 ))}
               </ul>
             </div>
             <div className="flex justify-end gap-2">
-              <button
+              <motion.button
+                {...hoverGrow}
+                {...tapShrink}
                 onClick={handleClose}
-                className="bg-gray-500 text-white p-2 rounded-lg"
+                className="bg-[#212121] text-[#FDFAF6] px-4 py-2 rounded-lg hover:bg-[#328E6E] transition-colors cursor-pointer"
               >
                 Hủy
-              </button>
-              <button
+              </motion.button>
+              <motion.button
+                {...hoverGrow}
+                {...tapShrink}
                 onClick={handleSave}
-                className="bg-green-600 text-white p-2 rounded-lg"
+                className="bg-[#096B68] text-[#FDFAF6] px-4 py-2 rounded-lg hover:bg-[#328E6E] transition-colors flex items-center gap-2 cursor-pointer"
               >
-                <Save size={18} />
-                Lưu
-              </button>
+                <Save size={18} /> Lưu
+              </motion.button>
             </div>
           </motion.div>
         </motion.div>

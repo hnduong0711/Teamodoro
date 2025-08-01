@@ -6,7 +6,6 @@ import { type Column } from '../types/Column';
 // lấy dữ liệu 1 lần 
 export const fetchColumns = async (teamId: string, boardId: string) => {
   if (!teamId || !boardId) {
-    console.log("No teamId or boardId, setting columns to empty");
     useColumnStore.getState().setColumns([]);
     return;
   }
@@ -15,14 +14,12 @@ export const fetchColumns = async (teamId: string, boardId: string) => {
   const columnsQuery = query(columnsCollection, orderBy('position'));
   const snapshot = await getDocs(columnsQuery);
   const columns = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Column));
-  console.log("Fetched columns:", columns);
   useColumnStore.getState().setColumns(columns);
 };
 
 // theo dõi dữ liệu
 export const subscribeToColumns = (teamId: string, boardId: string, callback?: () => void) => {
   if (!teamId || !boardId) {
-    console.log("No teamId or boardId, setting columns to empty in subscribe");
     useColumnStore.getState().setColumns([]);
     return () => {};
   }
@@ -31,7 +28,6 @@ export const subscribeToColumns = (teamId: string, boardId: string, callback?: (
   const columnsQuery = query(columnsCollection, orderBy('position'));
   const unsubscribe = onSnapshot(columnsQuery, (snapshot) => {
     const columns = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Column));
-    console.log("Subscribed columns:", columns);
     useColumnStore.getState().setColumns(columns);
     if (callback) callback();
   }, (error) => console.error('Error subscribing to columns:', error));
@@ -63,26 +59,10 @@ export const deleteColumn = async (teamId: string, boardId: string, columnId: st
 };
 
 // kéo thả
-export const reorderColumns = async (teamId: string, boardId: string, activeId: string, overId: string) => {
+export const reorderColumnsInFirestore = async (teamId: string, boardId: string, columns: Column[]) => {
   const columnsCollection = collection(db, `teams/${teamId}/boards/${boardId}/columns`);
-  const snapshot = await getDocs(columnsCollection);
-  const columns = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Column));
-
-  const activeColumn = columns.find((c) => c.id === activeId);
-  const overColumn = columns.find((c) => c.id === overId);
-  if (!activeColumn || !overColumn) return;
-
-  // hoán đổi position hai col
-  const tempPosition = activeColumn.position;
-  activeColumn.position = overColumn.position;
-  overColumn.position = tempPosition;
-
-  // sắp xếp lại col dựa vào position mới
-  const sortedColumns = [...columns].sort((a, b) => a.position - b.position);
-
-  const promises = sortedColumns.map((col) =>
-    updateDoc(doc(columnsCollection, col.id), { position: sortedColumns.indexOf(col) })
+  const promises = columns.map((col, index) =>
+    updateDoc(doc(columnsCollection, col.id), { position: index })
   );
   await Promise.all(promises);
-  useColumnStore.getState().setColumns(sortedColumns);
 };

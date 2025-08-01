@@ -7,6 +7,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Trash2 } from "lucide-react";
+import { motion } from "framer-motion";
 import { useColumnStore } from "../../store/columnStore";
 import { useBoardStore } from "../../store/boardStore";
 import { useTeamStore } from "../../store/teamStore";
@@ -28,6 +29,7 @@ import {
   subscribeToTasks,
   updateTask,
 } from "../../services/taskService";
+import { hoverGrow, tapShrink, fadeUp } from "../../utils/motionVariants";
 
 interface ColumnProps {
   id: string;
@@ -117,11 +119,6 @@ const Column: React.FC<ColumnProps> = ({ id, column, onEdit, onDelete }) => {
     const [_, activeTaskId, sourceColumnId] = active.id.toString().split("-");
     const [__, overTaskId, targetColumnId] = over.id.toString().split("-");
 
-    console.log(activeTaskId);
-    console.log(sourceColumnId);
-    console.log(overTaskId);
-    console.log(targetColumnId);
-
     if (!activeTaskId || !sourceColumnId || !targetColumnId) return;
 
     const isSameColumn = sourceColumnId === targetColumnId;
@@ -176,12 +173,14 @@ const Column: React.FC<ColumnProps> = ({ id, column, onEdit, onDelete }) => {
   };
 
   return (
-    <div className="flex flex-col min-w-[300px]" ref={setNodeRef} style={style}>
-      <div className="flex space-x-4 cursor-move">
-        <div
-          onClick={handleEditColumn}
-          className="flex-1 cursor-text font-semibold"
-        >
+    <div ref={setNodeRef} style={style}>
+      <motion.div
+        variants={fadeUp}
+        initial="initial"
+        animate="animate"
+        className="flex flex-col min-w-[300px] py-4 px-2 bg-[#CFFFE2]/20 shadow rounded-xl"
+      >
+        <div className="flex items-center justify-between mb-2">
           {isEditing ? (
             <input
               value={name}
@@ -189,68 +188,75 @@ const Column: React.FC<ColumnProps> = ({ id, column, onEdit, onDelete }) => {
               onBlur={handleSaveColumn}
               onKeyPress={(e) => e.key === "Enter" && handleSaveColumn()}
               autoFocus
-              className="w-full p-1 border rounded"
+              className="w-full p-1 mr-4 border border-[#CFFFE2] rounded-lg bg-white dark:bg-[#212121] text-[#212121] dark:text-[#FBF6E9] focus:outline-none focus:border-[#328E6E]"
             />
           ) : (
-            <div onClick={handleEditColumn} className="cursor-text">
+            <div
+              onClick={handleEditColumn}
+              className="font-semibold text-[#212121] dark:text-[#FBF6E9] cursor-text hover:text-[#328E6E] transition-colors"
+            >
               {name}
             </div>
           )}
-        </div>
 
-        <div className="flex-1 px-12" {...listeners}></div>
-
-        <div className="flex items-center space-x-4 justify-between">
-          <div className="mt-2">
-            <img
-              src={"https://via.placeholder.com/30"}
-              alt="User"
-              className="w-6 h-6 rounded-full"
-            />
-          </div>
-          <button onClick={handleDeleteColumn} className="text-red-500">
+          <div className="flex items-center gap-2 cursor-pointer flex-1 w-32 h-8" {...listeners}></div>
+          <img
+            src={"https://via.placeholder.com/30"}
+            alt="User"
+            className="w-6 h-6 rounded-full"
+          />
+          <motion.button
+            {...hoverGrow}
+            {...tapShrink}
+            onClick={handleDeleteColumn}
+            className="text-red-500 hover:text-red-700"
+          >
             <Trash2 size={16} />
-          </button>
+          </motion.button>
         </div>
-      </div>
-      <div className="bg-gray-200 p-4 rounded-lg mb-4 flex flex-col space-y-2">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext items={columnTasks.map((t) => `task-${t.id}-${id}`)}>
-            {columnTasks.map((task) => (
-              <TaskItem
-                key={task.id}
-                id={task.id} // vẫn là taskId
-                title={task.title}
-                boardId={boardId || ""}
-                columnId={id} // để TaskItem biết columnId
-                onEdit={handleEditTask}
-                onDelete={handleDeleteTask}
-              />
-            ))}
-          </SortableContext>
-        </DndContext>
-        <div
-          className="mt-4 cursor-pointer bg-blue-100 p-2 rounded border border-slate-400 border-dashed"
-          onClick={handleAddTask}
-        >
-          + Add Task
+        <div className="bg-[#CFFFE2]/20 p-4 rounded-lg mb-4 flex flex-col space-y-2">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={columnTasks.map((t) => `task-${t.id}-${id}`)}
+            >
+              {columnTasks.map((task) => (
+                <TaskItem
+                  key={task.id}
+                  id={task.id}
+                  title={task.title}
+                  boardId={boardId || ""}
+                  columnId={id}
+                  onEdit={handleEditTask}
+                  onDelete={handleDeleteTask}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
+          <motion.div
+            {...hoverGrow}
+            {...tapShrink}
+            className="mt-4 cursor-pointer bg-[#096B68] text-[#FBF6E9] p-2 rounded-lg text-center hover:bg-[#328E6E] transition-colors"
+            onClick={handleAddTask}
+          >
+            + Thêm Task
+          </motion.div>
+          <TaskModal
+            isOpen={isModalOpen}
+            onClose={() => {
+              setIsModalOpen(false);
+              setTempTaskId(undefined);
+            }}
+            columnId={id}
+            teamId={teamId ?? ""}
+            boardId={boardId ?? ""}
+            tempTaskId={tempTaskId ?? ""}
+          />
         </div>
-        <TaskModal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setTempTaskId(undefined);
-          }}
-          columnId={id}
-          teamId={teamId ?? ""}
-          boardId={boardId ?? ""}
-          tempTaskId={tempTaskId ?? ""}
-        />
-      </div>
+      </motion.div>
     </div>
   );
 };

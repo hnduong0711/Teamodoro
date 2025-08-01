@@ -11,6 +11,7 @@ import type { Board } from "../../types/Board";
 import type { User } from "../../types/User";
 import { fetchUsersByIds } from "../../services/userService";
 import { useTeamStore } from "../../store/teamStore";
+import { fade, slideFromBottom, hoverGrow, tapShrink } from "../../utils/motionVariants";
 
 interface BoardModalProps {
   isOpen: boolean;
@@ -39,6 +40,7 @@ const BoardModal: React.FC<BoardModalProps> = ({
   const [members, setMembers] = useState<string[]>(board?.members || []);
   const [membersData, setMembersData] = useState<User[]>([]);
   const [createdBoardId, setCreatedBoardId] = useState<string | null>(null);
+
   useEffect(() => {
     setName(board?.name || "");
     setIsPublic(board?.isPublic ?? true);
@@ -56,12 +58,10 @@ const BoardModal: React.FC<BoardModalProps> = ({
         };
         const id = await addBoard(teamId, boardData, user.uid);
         setCreatedBoardId(id);
-        console.log("chạy if nè");
-        
       }
     };
     createBoardIfNeeded();
-  }, [isOpen, board, createdBoardId, user]);
+  }, [isOpen, board, createdBoardId, user, teamId]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -72,12 +72,10 @@ const BoardModal: React.FC<BoardModalProps> = ({
   }, [members]);
 
   const handleSave = async () => {
-    console.log(useTeamStore.getState().currentTeam);
-
     if (!user?.uid || !teamId) return;
     const memberSaved = isPublic
       ? useTeamStore.getState().currentTeam?.members
-      : [];
+      : members;
     const boardData = {
       name,
       isPublic,
@@ -106,8 +104,6 @@ const BoardModal: React.FC<BoardModalProps> = ({
       try {
         const boardIdToUse = board?.id || createdBoardId;
         if (boardIdToUse) {
-          console.log("có id nè");
-          
           const result = await onAddMemberToBoard(boardIdToUse, newMember);
           if (result.success) {
             setMembers([...members, result.userId]);
@@ -118,7 +114,7 @@ const BoardModal: React.FC<BoardModalProps> = ({
         alert(error.message);
       }
     } else {
-      alert("Người dùng đã có trong bảng !");
+      alert("Người dùng đã có trong bảng!");
     }
   };
 
@@ -132,110 +128,127 @@ const BoardModal: React.FC<BoardModalProps> = ({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          variants={fade}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className="fixed inset-0 bg-[#212121]/50 flex items-center justify-center z-50"
         >
           <motion.div
-            initial={{ y: 50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 50, opacity: 0 }}
-            className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md"
+            variants={slideFromBottom}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="bg-[#FDFAF6] dark:bg-[#2A2A2A] p-6 rounded-lg shadow-lg w-full max-w-md mx-4"
           >
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">
+              <h2 className="text-xl font-bold text-[#212121] dark:text-[#FBF6E9]">
                 {board ? "Sửa Board" : "Thêm Board"}
               </h2>
-              <button
+              <motion.button
+                {...hoverGrow}
+                {...tapShrink}
                 onClick={onClose}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-[#212121] dark:text-[#FBF6E9] hover:text-[#328E6E] cursor-pointer"
               >
                 <X size={24} />
-              </button>
+              </motion.button>
             </div>
             <div className="mb-4">
-              <label className="block text-gray-700 dark:text-gray-200 mb-2">
+              <label className="block text-[#212121] dark:text-[#FBF6E9] mb-2 font-medium">
                 Tên Board
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:text-white"
+                className="w-full p-2 border border-[#CFFFE2] rounded-lg bg-white dark:bg-[#212121] text-[#212121] dark:text-[#FBF6E9] focus:outline-none focus:border-[#328E6E]"
               />
             </div>
             <div className="mb-4">
-              <label className="block text-gray-700 dark:text-gray-200 mb-2">
+              <label className="block text-[#212121] dark:text-[#FBF6E9] mb-2 font-medium">
                 Trạng thái
               </label>
-              <div className="flex space-x-4">
-                <label>
+              <div className="flex gap-6">
+                <label className="flex items-center gap-2 text-[#212121] dark:text-[#FBF6E9]">
                   <input
                     type="radio"
                     checked={isPublic}
                     onChange={() => setIsPublic(true)}
-                  />{" "}
+                    className="accent-[#096B68]"
+                  />
                   Public
                 </label>
-                <label>
+                <label className="flex items-center gap-2 text-[#212121] dark:text-[#FBF6E9]">
                   <input
                     type="radio"
                     checked={!isPublic}
                     onChange={() => setIsPublic(false)}
-                  />{" "}
+                    className="accent-[#096B68]"
+                  />
                   Private
                 </label>
               </div>
             </div>
             {!isPublic && (
               <div className="mb-4">
-                <label className="block text-gray-700 dark:text-gray-200 mb-2">
+                <label className="block text-[#212121] dark:text-[#FBF6E9] mb-2 font-medium">
                   Thêm Thành viên
                 </label>
-                <div className="flex gap-2 mb-2">
+                <div className="flex gap-2 mb-4">
                   <input
                     type="email"
                     value={newMember}
                     onChange={(e) => setNewMember(e.target.value)}
-                    className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:text-white"
+                    className="w-full p-2 border border-[#CFFFE2] rounded-lg bg-white dark:bg-[#212121] text-[#212121] dark:text-[#FBF6E9] focus:outline-none focus:border-[#328E6E]"
                     placeholder="Nhập email"
                   />
-                  <button
+                  <motion.button
+                    {...hoverGrow}
+                    {...tapShrink}
                     onClick={handleAddMember}
-                    className="bg-blue-600 text-white p-2 rounded-lg"
+                    className="bg-[#096B68] text-[#FBF6E9] p-2 rounded-lg hover:bg-[#328E6E] transition-colors cursor-pointer"
                   >
                     <UserPlus size={18} />
-                  </button>
+                  </motion.button>
                 </div>
-                <ul className="list-disc pl-5">
+                <ul className="space-y-2">
                   {membersData.map((member) => (
-                    <li key={member.id} className="flex justify-between">
+                    <li
+                      key={member.id}
+                      className="flex justify-between items-center text-[#212121] dark:text-[#FBF6E9]"
+                    >
                       {member.displayName}
-                      <button
+                      <motion.button
+                        {...hoverGrow}
+                        {...tapShrink}
                         onClick={() => handleRemoveMember(member.id)}
-                        className="text-red-500 hover:text-red-700"
+                        className="text-red-500 hover:text-red-700 cursor-pointer"
                       >
                         <X size={16} />
-                      </button>
+                      </motion.button>
                     </li>
                   ))}
                 </ul>
               </div>
             )}
             <div className="flex justify-end gap-2">
-              <button
+              <motion.button
+                {...hoverGrow}
+                {...tapShrink}
                 onClick={handleCancel}
-                className="bg-gray-500 text-white p-2 rounded-lg"
+                className="bg-[#212121] text-[#FBF6E9] px-4 py-2 rounded-lg hover:bg-[#328E6E] transition-colors cursor-pointer"
               >
-                Cancel
-              </button>
-              <button
+                Hủy
+              </motion.button>
+              <motion.button
+                {...hoverGrow}
+                {...tapShrink}
                 onClick={handleSave}
-                className="bg-green-600 text-white p-2 rounded-lg"
+                className="bg-[#096B68] text-[#FBF6E9] px-4 py-2 rounded-lg hover:bg-[#328E6E] transition-colors flex items-center gap-2 cursor-pointer"
               >
-                <Save size={18} /> Save
-              </button>
+                <Save size={18} /> Lưu
+              </motion.button>
             </div>
           </motion.div>
         </motion.div>

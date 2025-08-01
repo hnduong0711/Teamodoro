@@ -13,6 +13,7 @@ import TeamModal from "../components/Modals/TeamModal";
 import type { Team } from "../types/Team";
 import { useAuth } from "../hooks/useAuth";
 import Spinner from "../components/Spinner/Spinner";
+import { fadeUp, hoverGrow, tapShrink, staggerContainer, staggerItem } from "../utils/motionVariants";
 
 const HomePage: React.FC = () => {
   const { teams, setCurrentTeam } = useTeamStore();
@@ -34,8 +35,8 @@ const HomePage: React.FC = () => {
   };
 
   const handleSelectTeam = (team: Team) => {
-    setCurrentTeam(team)
-  }
+    setCurrentTeam(team);
+  };
 
   const handleLeaveTeam = (teamId: string) => {
     if (window.confirm("Bạn có chắc muốn rời nhóm?")) {
@@ -64,82 +65,112 @@ const HomePage: React.FC = () => {
   if (loading) return <Spinner />;
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Danh sách Team</h1>
+    <div className="p-4 sm:p-6 bg-[#FDFAF6] dark:bg-[#212121] min-h-screen">
+      <motion.h1
+        variants={fadeUp}
+        initial="initial"
+        animate="animate"
+        className="text-2xl sm:text-3xl font-bold text-[#212121] dark:text-[#FDFAF6] mb-6"
+      >
+        Danh sách Team
+      </motion.h1>
       {/* NÚT THÊM TEAM */}
-      <button
+      <motion.button
+        variants={fadeUp}
+        initial="initial"
+        animate="animate"
+        {...hoverGrow}
+        {...tapShrink}
         onClick={() => setIsAddModalOpen(true)}
-        className="mb-4 bg-blue-600 text-white p-2 rounded-lg flex items-center gap-2"
+        className="mb-6 bg-[#096B68] text-[#FDFAF6] px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-[#328E6E] transition-color cursor-pointer"
       >
         <Plus size={18} /> Thêm Team
-      </button>
+      </motion.button>
 
       {/* DANH SÁCH TEAM */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+      >
         {teams.map((team) => (
           <motion.div
             key={team.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md relative"
+            variants={staggerItem}
+            className="bg-white dark:bg-[#2A2A2A] p-4 rounded-lg shadow-md relative border border-[#CFFFE2]/20"
           >
             <NavLink
               to={`/team/${team.id}`}
-              className="block mb-2 text-lg font-semibold"
+              className="block mb-2 text-lg font-semibold text-[#212121] dark:text-[#FDFAF6] hover:text-[#328E6E] transition-colors"
               onClick={() => handleSelectTeam(team)}
             >
               {team.name}
             </NavLink>
             <div className="relative">
-              <button
+              <motion.button
+                {...hoverGrow}
+                {...tapShrink}
                 onClick={() => handleOptionsClick(team.id)}
-                className="absolute bottom-2 right-2 text-gray-500 hover:text-gray-700"
+                className="absolute bottom-2 right-2 text-[#212121] dark:text-[#FDFAF6] hover:text-[#328E6E] cursor-pointer"
               >
                 <MoreVertical size={20} />
-              </button>
+              </motion.button>
               {isDropdownOpen === team.id && (
-                <div className="absolute bottom-8 right-0 bg-white dark:bg-gray-800 border rounded-lg shadow-md w-32">
+                <motion.div
+                  variants={fadeUp}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  className="absolute bottom-10 right-0 bg-white dark:bg-[#2A2A2A] border border-[#CFFFE2]/20 rounded-lg shadow-md w-32 z-10"
+                >
                   {user?.uid !== team.ownerId ? (
-                    <button
+                    <motion.button
+                      {...hoverGrow}
+                      {...tapShrink}
                       onClick={() => handleLeaveTeam(team.id)}
-                      className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-red-500"
+                      className="w-full text-left p-2 text-red-500 hover:bg-[#CFFFE2]/10 flex items-center gap-2 cursor-pointer"
                     >
-                      <LogOut size={16} className="inline mr-2" /> Rời nhóm
-                    </button>
+                      <LogOut size={16} /> Rời nhóm
+                    </motion.button>
                   ) : (
                     <>
-                      <button
+                      <motion.button
+                        {...hoverGrow}
+                        {...tapShrink}
                         onClick={() => handleEditTeam(team)}
-                        className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="w-full text-left p-2 text-[#212121] dark:text-[#FDFAF6] hover:bg-[#CFFFE2]/10 flex items-center gap-2 cursor-pointer"
                       >
-                        <Edit size={16} className="inline mr-2" /> Chỉnh sửa
-                      </button>
-                      <button
+                        <Edit size={16} /> Chỉnh sửa
+                      </motion.button>
+                      <motion.button
+                        {...hoverGrow}
+                        {...tapShrink}
                         onClick={() => handleDeleteTeam(team.id)}
-                        className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-red-500"
+                        className="w-full text-left p-2 text-red-500 hover:bg-[#CFFFE2]/10 flex items-center gap-2 cursor-pointer"
                       >
-                        <Trash2 size={16} className="inline mr-2" /> Xóa
-                      </button>
+                        <Trash2 size={16} /> Xóa
+                      </motion.button>
                     </>
                   )}
-                </div>
+                </motion.div>
               )}
             </div>
           </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {/* TEAM MODAL */}
-      {isAddModalOpen && <TeamModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-      />}
-      {isEditModalOpen && <TeamModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        team={useTeamStore.getState().currentTeam ?? undefined}
-      />}
-      
+      {isAddModalOpen && (
+        <TeamModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
+      )}
+      {isEditModalOpen && (
+        <TeamModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          team={useTeamStore.getState().currentTeam ?? undefined}
+        />
+      )}
     </div>
   );
 };

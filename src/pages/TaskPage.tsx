@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useTaskStore } from "../store/taskStore";
 import { subscribeToTask, updateTask } from "../services/taskService";
 import { useCLIStore } from "../store/cliStore";
 import {
-fetchChecklistItems,
+  fetchChecklistItems,
   subscribeToChecklistItems,
   updateChecklistItem,
   addChecklistItem,
@@ -29,6 +30,7 @@ import { addChatMessage, subscribeToChatMessages } from "../services/chatService
 import { useAuth } from "../hooks/useAuth";
 import { useChatStore } from "../store/chatStore";
 import { Timestamp } from "firebase/firestore";
+import { fadeUp, hoverGrow, tapShrink, staggerContainer, staggerItem } from "../utils/motionVariants";
 
 const SortableChecklistItem = ({
   item,
@@ -49,13 +51,13 @@ const SortableChecklistItem = ({
     useSortable({ id: item.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
   const { currentTask } = useTaskStore();
-  const {getProgressByTask} = useCLIStore()
+  const { getProgressByTask } = useCLIStore();
 
   const handleToggle = () => {
     updateChecklistItem(teamId, boardId, columnId, taskId, item.id, {
       done: !item.done,
     });
-    updateTask(teamId,boardId, columnId, taskId, {progress: getProgressByTask(taskId).percent})
+    updateTask(teamId, boardId, columnId, taskId, { progress: getProgressByTask(taskId).percent });
   };
 
   const handleSaveEdit = () => {
@@ -68,7 +70,8 @@ const SortableChecklistItem = ({
   };
 
   return (
-    <li
+    <motion.li
+      variants={staggerItem}
       ref={setNodeRef}
       style={style}
       className="flex items-center mb-2 max-w-full"
@@ -76,13 +79,13 @@ const SortableChecklistItem = ({
       <GripVertical
         {...attributes}
         {...listeners}
-        className="cursor-move mr-2 text-gray-400"
+        className="cursor-move mr-2 text-[#212121] dark:text-[#FBF6E9] opacity-50 hover:opacity-100 transition-opacity"
       />
       <input
         type="checkbox"
         checked={item.done}
         onChange={handleToggle}
-        className="mr-2"
+        className="mr-2 accent-[#096B68]"
         disabled={!currentTask?.isStart}
       />
       {isEditing ? (
@@ -93,24 +96,27 @@ const SortableChecklistItem = ({
           onBlur={handleSaveEdit}
           onKeyPress={(e) => e.key === "Enter" && handleSaveEdit()}
           autoFocus
-          className="flex-1 p-1 border rounded"
+          className="flex-1 p-1 border border-[#CFFFE2] rounded-lg bg-white dark:bg-[#212121] text-[#212121] dark:text-[#FBF6E9] focus:outline-none focus:border-[#328E6E]"
           disabled={!currentTask?.isStart}
         />
       ) : (
-        <span onClick={() => setIsEditing(true)} className="flex-1 cursor-text">
+        <span
+          onClick={() => setIsEditing(true)}
+          className="flex-1 cursor-text text-[#212121] dark:text-[#FBF6E9] hover:text-[#328E6E] transition-colors"
+        >
           {item.text}
         </span>
       )}
-      <button
+      <motion.button
+        {...hoverGrow}
+        {...tapShrink}
         disabled={!currentTask?.isStart}
-        onClick={() =>
-          deleteChecklistItem(teamId, boardId, columnId, taskId, item.id)
-        }
-        className="ml-2 text-red-500"
+        onClick={() => deleteChecklistItem(teamId, boardId, columnId, taskId, item.id)}
+        className="ml-2 text-red-500 hover:text-red-700 disabled:opacity-50 transition-colors cursor-pointer"
       >
         <X size={16} />
-      </button>
-    </li>
+      </motion.button>
+    </motion.li>
   );
 };
 
@@ -129,24 +135,14 @@ const TaskPage: React.FC = () => {
   const { currentTeam } = useTeamStore();
   const teamId = currentTeam?.id;
   const [newMessage, setNewMessage] = useState("");
-  const { messagesByTask, setMessages } = useChatStore();
-  const {user} = useAuth();
+  const { messagesByTask } = useChatStore();
+  const { user } = useAuth();
+  const [newChecklistText, setNewChecklistText] = useState("");
 
   useEffect(() => {
     if (teamId && boardId && columnId && taskId) {
-      const unsubscribeTask = subscribeToTask(
-        teamId,
-        boardId,
-        columnId,
-        taskId,
-        (task) => setCurrentTask(task)
-      );
-      const unsubscribeChecklist = subscribeToChecklistItems(
-        teamId,
-        boardId,
-        columnId,
-        taskId
-      );
+      const unsubscribeTask = subscribeToTask(teamId, boardId, columnId, taskId, (task) => setCurrentTask(task));
+      const unsubscribeChecklist = subscribeToChecklistItems(teamId, boardId, columnId, taskId);
       const unsubscribeMessages = subscribeToChatMessages(teamId, boardId, columnId, taskId);
       return () => {
         unsubscribeTask();
@@ -164,7 +160,7 @@ const TaskPage: React.FC = () => {
 
   const handleStart = () => {
     if (!isStartClicked && currentTask && !currentTask.isStart) {
-      updateTask(teamId!, boardId!, columnId!, taskId!, { isStart: true, startDate: Timestamp.now(),});
+      updateTask(teamId!, boardId!, columnId!, taskId!, { isStart: true, startDate: Timestamp.now() });
       setIsStartClicked(true);
     }
   };
@@ -197,13 +193,14 @@ const TaskPage: React.FC = () => {
     }
   };
 
-  const [newChecklistText, setNewChecklistText] = useState("");
-
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor)
   );
+
   const checklistItems = itemsByTask[taskId || ""] || [];
+  const chatMessages = messagesByTask[taskId || ""] || [];
+  const currentUserId = user?.uid;
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
@@ -213,19 +210,9 @@ const TaskPage: React.FC = () => {
     const newIndex = checklistItems.findIndex((item) => item.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
 
-    await moveChecklistItem(
-      teamId!,
-      boardId!,
-      columnId!,
-      taskId!,
-      active.id.toString(),
-      newIndex,
-      checklistItems
-    );
+    await moveChecklistItem(teamId!, boardId!, columnId!, taskId!, active.id.toString(), newIndex, checklistItems);
   };
 
-  const chatMessages = messagesByTask[taskId || ""] || [];
-  const currentUserId = user?.uid;
   const handleSendMessage = () => {
     if (teamId && boardId && columnId && taskId && newMessage && user?.uid) {
       addChatMessage(teamId, boardId, columnId, taskId, user.uid, newMessage);
@@ -234,104 +221,108 @@ const TaskPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100 p-4">
-      {/* Zone 1: Task Information */}
-      <div className="bg-white p-4 rounded-lg shadow mb-4">
+    <div className="flex flex-col h-screen bg-[#FDFAF6] dark:bg-[#212121] p-4 sm:p-6">
+      {/* Task Information */}
+      <motion.div
+        variants={fadeUp}
+        initial="initial"
+        animate="animate"
+        className="bg-white dark:bg-[#2A2A2A] p-4 rounded-lg shadow-md mb-6 border border-[#CFFFE2]/20"
+      >
         <div className="flex items-center mb-4">
-          <button onClick={() => navigate(-1)} className="mr-4 text-blue-500">
-            ← Back
-          </button>
-          <h2 className="text-2xl font-bold">
-            {currentTask?.title || "Loading..."}
+          <motion.button
+            {...hoverGrow}
+            {...tapShrink}
+            onClick={() => navigate(-1)}
+            className="mr-4 text-[#096B68] hover:text-[#328E6E] transition-colors cursor-pointer"
+          >
+            ← Quay lại
+          </motion.button>
+          <h2 className="text-2xl sm:text-3xl font-bold text-[#212121] dark:text-[#FBF6E9]">
+            {currentTask?.title || "Đang tải..."}
           </h2>
         </div>
-        <p className="mb-2">{currentTask?.description || "No description"}</p>
-        <p className="mb-2">
-          Due Date:{" "}
-          {currentTask?.dueDate
-            ? currentTask.dueDate.toDate().toLocaleDateString("vi-VN")
-            : "No due date"}
+        <p className="mb-2 text-[#212121] dark:text-[#FBF6E9]">
+          {currentTask?.description || "Không có mô tả"}
         </p>
-        <div className="mb-2">
-          Members:{" "}
-          {currentTask?.assignedTo?.length
-            ? currentTask.assignedTo.join(", ")
-            : "No members"}
+        <p className="mb-2 text-[#212121] dark:text-[#FBF6E9]">
+          Ngày hết hạn: {currentTask?.dueDate ? currentTask.dueDate.toDate().toLocaleDateString("vi-VN") : "Không có ngày hết hạn"}
+        </p>
+        <div className="mb-2 text-[#212121] dark:text-[#FBF6E9]">
+          Thành viên: {currentTask?.assignedTo?.length ? currentTask.assignedTo.join(", ") : "Không có thành viên"}
         </div>
-        <div className="flex space-x-4 mt-4">
-          <button
+        <div className="flex flex-wrap gap-4 mt-4">
+          <motion.button
+            {...hoverGrow}
+            {...tapShrink}
             onClick={handleStart}
             disabled={isStartClicked || currentTask?.isStart}
-            className="bg-blue-500 text-white px-4 py-2 rounded disabled:bg-gray-400"
+            className="bg-[#096B68] text-[#FBF6E9] px-4 py-2 rounded-lg cursor-pointer disabled:bg-[#212121]/50 disabled:text-[#FBF6E9]/50 hover:bg-[#328E6E] transition-colors"
           >
             Bắt đầu
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            {...hoverGrow}
+            {...tapShrink}
             onClick={handleDone}
-            disabled={
-              !currentTask?.isStart ||
-              !itemsByTask[taskId || ""]?.every((item) => item.done) ||
-              currentTask?.isDone
-            }
-            className="bg-green-500 text-white px-4 py-2 rounded disabled:bg-gray-400"
+            disabled={!currentTask?.isStart || !itemsByTask[taskId || ""]?.every((item) => item.done) || currentTask?.isDone}
+            className="bg-[#096B68] text-[#FBF6E9] px-4 py-2 rounded-lg cursor-pointer disabled:bg-[#212121]/50 disabled:text-[#FBF6E9]/50 hover:bg-[#328E6E] transition-colors"
           >
             Hoàn thành
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            {...hoverGrow}
+            {...tapShrink}
             onClick={handleFocusMode}
-            className="bg-purple-500 text-white px-4 py-2 rounded"
+            className="bg-[#096B68] text-[#FBF6E9] px-4 py-2 rounded-lg cursor-pointer hover:bg-[#328E6E] transition-colors"
           >
-            Focus Mode
-          </button>
+            Chế độ tập trung
+          </motion.button>
         </div>
-        {!currentTask?.isStart && (
+        {(currentTask?.isStart === false || currentTask?.isStart) && (
           <div className="text-red-500 text-xs font-bold p-2">
-            *Chú ý: Khi nhấn "Bắt đầu" mới có thể làm việc, khi xác nhận thì
-            không thể quay lại
+            {currentTask?.isStart
+              ? "*Chú ý: Chỉ có thể nhấn 'Hoàn thành' khi xong hết danh sách công việc, khi xác nhận thì không thể quay lại"
+              : "*Chú ý: Khi nhấn 'Bắt đầu' mới có thể làm việc, khi xác nhận thì không thể quay lại"}
           </div>
         )}
-        {currentTask?.isStart && (
-          <div className="text-red-500 text-xs font-bold p-2">
-            *Chú ý: Chỉ có thể nhấn "Hoàn thành" khi xong hết danh sách công
-            việc, khi xác nhận thì không thể quay lại
-          </div>
-        )}
-      </div>
+      </motion.div>
 
-      <div className="flex flex-1 space-x-4">
+      <div className="flex flex-col lg:flex-row flex-1 gap-4">
         {/* Checklist Items */}
-        <div className="bg-white p-4 rounded-lg shadow flex-1 max-w-[50%]">
+        <motion.div
+          variants={fadeUp}
+          initial="initial"
+          animate="animate"
+          className="bg-white dark:bg-[#2A2A2A] p-4 rounded-lg shadow-md flex-1 border border-[#CFFFE2]/20"
+        >
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-semibold">Danh sách công việc</h3>
-            <div
-              className={
-                !currentTask?.isStart ? "pointer-events-none opacity-50" : ""
-              }
-            >
+            <h3 className="text-xl font-semibold text-[#212121] dark:text-[#FBF6E9]">
+              Danh sách công việc
+            </h3>
+            <div className={!currentTask?.isStart ? "pointer-events-none opacity-50" : ""}>
               <input
                 type="text"
                 value={newChecklistText}
                 onChange={(e) => setNewChecklistText(e.target.value)}
-                placeholder="New checklist item"
-                className="p-1 border rounded mr-2"
+                placeholder="Thêm công việc mới"
+                className="p-1 border border-[#CFFFE2] rounded-lg bg-white dark:bg-[#212121] text-[#212121] dark:text-[#FBF6E9] focus:outline-none focus:border-[#328E6E] mr-2"
                 disabled={!currentTask?.isStart}
               />
-              <button
+              <motion.button
+                {...hoverGrow}
+                {...tapShrink}
                 onClick={handleAddChecklistItem}
-                className="bg-blue-500 text-white px-2 py-1 rounded"
+                className="bg-[#096B68] text-[#FBF6E9] px-2 py-1 rounded-lg hover:bg-[#328E6E] transition-colors cursor-pointer"
                 disabled={!currentTask?.isStart}
               >
-                Add
-              </button>
+                Thêm
+              </motion.button>
             </div>
           </div>
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={checklistItems.map((item) => item.id)}>
-              <ul className="space-y-2">
+              <motion.ul variants={staggerContainer} initial="hidden" animate="show" className="space-y-2">
                 {checklistItems.map((item) => (
                   <SortableChecklistItem
                     key={item.id}
@@ -342,49 +333,63 @@ const TaskPage: React.FC = () => {
                     boardId={boardId || ""}
                   />
                 ))}
-              </ul>
+              </motion.ul>
             </SortableContext>
           </DndContext>
-        </div>
+        </motion.div>
 
         {/* Chat */}
-        <div className="bg-white p-4 rounded-lg shadow flex-1 max-w-[50%]">
-          <h3 className="text-xl font-semibold mb-4">Chat</h3>
-          <div className="h-64 mb-4 border rounded overflow-y-auto">
+        <motion.div
+          variants={fadeUp}
+          initial="initial"
+          animate="animate"
+          className="bg-white dark:bg-[#2A2A2A] p-4 rounded-lg shadow-md flex-1 border border-[#CFFFE2]/20"
+        >
+          <h3 className="text-xl font-semibold text-[#212121] dark:text-[#FBF6E9] mb-4">Chat</h3>
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="show"
+            className="h-64 mb-4 border border-[#CFFFE2]/20 rounded-lg overflow-y-auto"
+          >
             {chatMessages.map((message) => (
-              <div
+              <motion.div
                 key={message.id}
+                variants={staggerItem}
                 className={`mb-2 p-2 rounded-lg max-w-[70%] ${
                   message.senderId === currentUserId
-                    ? "bg-blue-100 ml-auto"
-                    : "bg-gray-100"
+                    ? "bg-[#096B68] text-[#FBF6E9] ml-auto"
+                    : "bg-[#CFFFE2]/30 text-[#212121] dark:text-[#FBF6E9]"
                 }`}
               >
-                {/* Placeholder for avatar */}
-                {message.senderId !== currentUserId && <div className="w-8 h-8 bg-gray-300 rounded-full inline-block mr-2"></div>}
+                {message.senderId !== currentUserId && (
+                  <div className="w-8 h-8 bg-[#CFFFE2]/50 rounded-full inline-block mr-2"></div>
+                )}
                 <p>{message.text}</p>
-                <small className="text-gray-500">
-                  {message.createdAt.toDate().toLocaleTimeString()}
+                <small className="text-[#212121]/70 dark:text-[#FBF6E9]/70">
+                  {message.createdAt.toDate().toLocaleTimeString("vi-VN")}
                 </small>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
           <div className="flex">
             <input
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type a message"
-              className="flex-1 p-2 border rounded"
+              placeholder="Nhập tin nhắn"
+              className="flex-1 p-2 border border-[#CFFFE2] rounded-lg bg-white dark:bg-[#212121] text-[#212121] dark:text-[#FBF6E9] focus:outline-none focus:border-[#328E6E]"
             />
-            <button
+            <motion.button
+              {...hoverGrow}
+              {...tapShrink}
               onClick={handleSendMessage}
-              className="ml-2 bg-blue-500 text-white px-4 py-2 rounded"
+              className="ml-2 bg-[#096B68] text-[#FBF6E9] px-4 py-2 rounded-lg hover:bg-[#328E6E] transition-colors cursor-pointer"
             >
-              Send
-            </button>
+              Gửi
+            </motion.button>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

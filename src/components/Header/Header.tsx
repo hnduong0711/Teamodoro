@@ -5,10 +5,24 @@ import { Bell, User, LogOut } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { logout } from "../../services/authService";
 import { useAuth } from "../../hooks/useAuth";
+import { useEffect, useState } from "react";
+import { type User as UserType } from "../../types/User";
+import { fetchUserById } from "../../services/userService";
 
 const Header = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState<UserType | null>(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      if (user && !loading) {
+        const fetchedUser = await fetchUserById(user.uid);
+        setCurrentUser(fetchedUser);
+      }
+    };
+    loadUser();
+  }, [user, loading]);
   return (
     <motion.div
       {...fade}
@@ -26,8 +40,8 @@ const Header = () => {
         <NavLink to="/account" className="cursor-pointer">
           {user ? (
             <img
-              className="size-10 rounded-3xl"
-              src={user.photoURL ?? undefined}
+              className="size-12 rounded-full"
+              src={currentUser?.avatarUrl ?? undefined}
             ></img>
           ) : (
             <User />

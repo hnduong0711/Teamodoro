@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { validateEmail, validatePassword } from '../utils/validation';
-import { slideFromLeft } from '../utils/motionVariants';
-import { loginWithEmail, loginWithGoogle } from '../services/authService';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { validateEmail, validatePassword } from "../utils/validation";
+import { loginWithEmail, loginWithGoogle } from "../services/authService";
+import { fadeUp, hoverGrow, tapShrink, staggerContainer, staggerItem, scaleIn } from "../utils/motionVariants";
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -27,32 +27,51 @@ const Login = () => {
 
     try {
       await loginWithEmail(email, password);
-      navigate('/');
+      navigate("/");
     } catch (err) {
-      setError('Đăng nhập thất bại. Vui lòng kiểm tra email hoặc mật khẩu.');
+      setError("Đăng nhập thất bại. Vui lòng kiểm tra email hoặc mật khẩu.");
     }
   };
 
   const handleGoogleLogin = async () => {
     try {
       await loginWithGoogle();
-      navigate('/');
+      navigate("/");
     } catch (err) {
-      setError('Đăng nhập bằng Google thất bại. Vui lòng thử lại.');
+      setError("Đăng nhập bằng Google thất bại. Vui lòng thử lại.");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#FDFAF6] dark:bg-[#212121] p-4 sm:p-6 relative overflow-hidden">
       <motion.div
-        {...slideFromLeft}
-        className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md"
+        variants={fadeUp}
+        initial="initial"
+        animate="animate"
+        className="bg-white dark:bg-[#2A2A2A] p-6 sm:p-8 rounded-lg shadow-lg w-full max-w-md border border-[#CFFFE2]/20 mr-0 md:mr-[50px]"
       >
-        <h2 className="text-2xl font-bold text-center mb-6 text-gray-900 dark:text-white">Đăng nhập</h2>
-        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
-        <form onSubmit={handleEmailLogin}>
-          <div className="mb-4">
-            <label className="block text-gray-700 dark:text-gray-200 mb-2" htmlFor="email">
+        <motion.h2
+          variants={fadeUp}
+          className="text-2xl sm:text-3xl font-bold text-center mb-6 text-[#212121] dark:text-[#FBF6E9]"
+        >
+          Đăng nhập
+        </motion.h2>
+        {error && (
+          <motion.p variants={fadeUp} className="text-red-500 text-center mb-4">
+            {error}
+          </motion.p>
+        )}
+        <motion.form
+          variants={staggerContainer}
+          initial="hidden"
+          animate="show"
+          onSubmit={handleEmailLogin}
+        >
+          <motion.div variants={staggerItem} className="mb-4">
+            <label
+              className="block text-[#212121] dark:text-[#FBF6E9] mb-2"
+              htmlFor="email"
+            >
               Email
             </label>
             <input
@@ -60,12 +79,16 @@ const Login = () => {
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:text-white"
+              className="w-full p-3 border border-[#CFFFE2] rounded-lg bg-white dark:bg-[#212121] text-[#212121] dark:text-[#FBF6E9] focus:outline-none focus:border-[#328E6E]"
               placeholder="Nhập email"
+                
             />
-          </div>
-          <div className="mb-6">
-            <label className="block text-gray-700 dark:text-gray-200 mb-2" htmlFor="password">
+          </motion.div>
+          <motion.div variants={staggerItem} className="mb-6">
+            <label
+              className="block text-[#212121] dark:text-[#FBF6E9] mb-2"
+              htmlFor="password"
+            >
               Mật khẩu
             </label>
             <input
@@ -73,30 +96,44 @@ const Login = () => {
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:text-white"
+              className="w-full p-3 border border-[#CFFFE2] rounded-lg bg-white dark:bg-[#212121] text-[#212121] dark:text-[#FBF6E9] focus:outline-none focus:border-[#328E6E]"
               placeholder="Nhập mật khẩu"
             />
-          </div>
-          <button
+          </motion.div>
+          <motion.button
+            {...hoverGrow}
+            {...tapShrink}
             type="submit"
-            className="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700"
+            className="w-full bg-[#096B68] text-[#FBF6E9] p-3 rounded-lg hover:bg-[#328E6E] transition-colors"
           >
             Đăng nhập
-          </button>
-        </form>
-        <button
+          </motion.button>
+        </motion.form>
+        <motion.button
+          {...hoverGrow}
+          {...tapShrink}
           onClick={handleGoogleLogin}
-          className="w-full mt-4 bg-red-600 text-white p-3 rounded-lg hover:bg-red-700"
+          className="w-full mt-4 bg-[#096B68] text-[#FBF6E9] p-3 rounded-lg hover:bg-[#328E6E] transition-colors"
         >
           Đăng nhập bằng Google
-        </button>
-        <p className="mt-4 text-center text-gray-600 dark:text-gray-300">
-          Chưa có tài khoản?{' '}
-          <a href="/register" className="text-blue-600 hover:underline">
+        </motion.button>
+        <motion.p
+          variants={staggerItem}
+          className="mt-4 text-center text-[#212121] dark:text-[#FBF6E9]"
+        >
+          Chưa có tài khoản?{" "}
+          <a href="/register" className="text-[#096B68] hover:text-[#328E6E] hover:underline">
             Đăng ký
           </a>
-        </p>
+        </motion.p>
       </motion.div>
+      <motion.div
+        variants={scaleIn}
+        initial="initial"
+        animate="animate"
+        className="absolute bottom-0 left-0 w-[200%] h-[200%] bg-gradient-to-r from-[#096B68] to-[#328E6E] rounded-full -translate-x-1/4 translate-y-1/4"
+        style={{ clipPath: "path('M 0 0 A 100 100 0 0 1 86.6 50 L 100 100 L 0 100 Z')" }}
+      />
     </div>
   );
 };
