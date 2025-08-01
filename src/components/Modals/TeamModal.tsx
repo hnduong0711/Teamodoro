@@ -4,6 +4,7 @@ import { X, UserPlus, Trash2, Save } from "lucide-react";
 import {
   addMemberToTeam,
   addTeam,
+  deleteTeam,
   removeMemberFromTeam,
   updateTeam,
 } from "../../services/teamService";
@@ -26,6 +27,7 @@ const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, team }) => {
   const [members, setMembers] = useState<string[]>(team?.members || []);
   const [membersData, setMembersData] = useState<User[]>([]);
 
+  const [createdTeamId, setCreatedTeamId] = useState<string | null>(null);
   useEffect(() => {
     const fetchUserData = async () => {
       const membersData = await fetchUsersByIds(members);
@@ -34,45 +36,75 @@ const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, team }) => {
     fetchUserData();
   }, [members]);
 
+  useEffect(() => {
+    const createTeamIfNeeded = async () => {
+      if (!team && user?.uid && isOpen && !createdTeamId) {
+        const tempTeam: Omit<Team, "id"> = {
+          name: "",
+          ownerId: user.uid,
+          members: [],
+          createdAt: Timestamp.now(),
+        };
+        const newTeamId = await addTeam(tempTeam, user.uid);
+        setCreatedTeamId(newTeamId);
+      }
+    };
+    createTeamIfNeeded();
+  }, [isOpen, team, user, createdTeamId]);
+
   const handleSave = async () => {
-    if (!user?.uid) {
-      console.error("No authenticated user found");
-      return;
-    }
+    if (!user?.uid) return;
     const teamData: Omit<Team, "id"> = {
       name,
       ownerId: user.uid,
       members,
       createdAt: Timestamp.now(),
     };
+
     if (team) {
-      await updateTeam(team.id, { name, members, ownerId: team.ownerId });
-    } else {
-      await addTeam(teamData, user.uid);
+      await updateTeam(team.id, {
+        name,
+        members,
+        ownerId: team.ownerId,
+      });
+    } else if (createdTeamId) {
+      await updateTeam(createdTeamId, teamData);
+    }
+
+    onClose();
+  };
+
+  const handleClose = async () => {
+    if (!team && createdTeamId) {
+      await deleteTeam(createdTeamId);
     }
     onClose();
   };
 
   const handleAddMember = async (email: string) => {
-    if (team?.id) {
-      try {
-        const result = await addMemberToTeam(team?.id, email);
-        
-        if (result.success) {
-          setMembers([...members, result.userId]);
-          setNewMember("");
-        }
-      } catch (error: any) {
-        alert(error.message);
+    const teamId = team?.id || createdTeamId;
+    if (!teamId) {
+      alert("Team chưa được tạo.");
+      return;
+    }
+
+    try {
+      const result = await addMemberToTeam(teamId, email);
+      if (result.success) {
+        setMembers((prev) => [...prev, result.userId]);
+        setNewMember("");
       }
-    } else {
-      throw new Error("Team ID not found");
+    } catch (error: any) {
+      alert(error.message);
     }
   };
 
   const handleRemoveMember = async (memberId: string) => {
-    setMembers(members.filter((email) => email !== memberId));
-    if (team?.id) await removeMemberFromTeam(team.id, memberId);
+    setMembers((prev) => prev.filter((id) => id !== memberId));
+    const teamId = team?.id || createdTeamId;
+    if (teamId) {
+      await removeMemberFromTeam(teamId, memberId);
+    }
   };
 
   return (
@@ -151,7 +183,7 @@ const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, team }) => {
             </div>
             <div className="flex justify-end gap-2">
               <button
-                onClick={onClose}
+                onClick={handleClose}
                 className="bg-gray-500 text-white p-2 rounded-lg"
               >
                 Hủy

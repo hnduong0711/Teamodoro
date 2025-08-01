@@ -64,7 +64,8 @@ export const subscribeToTeams = (userId: string | null, callback?: () => void) =
 // thêm team
 export const addTeam = async (team: Omit<Team, 'id' | 'createdAt'>, userId: string) => {
   if (!userId) throw new Error('No authenticated user found');
-  await addDoc(collection(db, 'teams'), { ...team, ownerId: userId, createdAt: Timestamp.now() });
+  const docRef = await addDoc(collection(db, 'teams'), { ...team, ownerId: userId, createdAt: Timestamp.now() });
+  return docRef.id;
 };
 
 // sửa team
