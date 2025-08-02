@@ -146,63 +146,115 @@ const WeeklyView: React.FC = () => {
           ))}
         </select>
       </motion.div>
-      <motion.div
-        variants={staggerContainer}
-        initial="hidden"
-        animate="show"
-        className="grid grid-cols-1 sm:grid-cols-7 gap-2 relative"
-        style={{ minHeight: "400px" }}
-      >
-        {weekDays.map((day, index) => (
-          <motion.div
-            key={index}
-            variants={staggerItem}
-            className="bg-white dark:bg-[#2A2A2A] p-2 rounded-lg shadow-md text-center text-[#212121] dark:text-[#FBF6E9] border border-[#CFFFE2]/20"
-          >
-            {day.toLocaleDateString("vi-VN", {
-              weekday: "short",
-              day: "numeric",
-            })}
-          </motion.div>
-        ))}
-        {tasks.map((task, taskIndex) => {
-          const position = getTaskPosition(task);
-          if (!position) return null;
-          const { startDay, endDay } = position;
-          const width = ((endDay - startDay + 1) / 7) * 100;
+      {/* Mobile View: Tasks by Day */}
+      <div className="sm:hidden">
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="show"
+          className="flex flex-col gap-4"
+        >
+          {weekDays.map((day, index) => {
+            const dayTasks = tasks.filter((task) => {
+              const position = getTaskPosition(task);
+              return position && position.startDay <= index && position.endDay >= index;
+            });
+            if (!dayTasks.length) return null;
 
-          const overlapIndex = tasks.filter((t, i) => {
-            const pos = getTaskPosition(t);
             return (
-              i < taskIndex &&
-              pos &&
-              pos.startDay <= endDay &&
-              pos.endDay >= startDay
+              <motion.div
+                key={index}
+                variants={staggerItem}
+                className="bg-white dark:bg-[#2A2A2A] p-4 rounded-lg shadow-md border border-[#CFFFE2]/20"
+              >
+                <h3 className="text-lg font-semibold text-[#212121] dark:text-[#FBF6E9] mb-2">
+                  {day.toLocaleDateString("vi-VN", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "numeric",
+                  })}
+                </h3>
+                <motion.ul variants={staggerContainer} initial="hidden" animate="show">
+                  {dayTasks.map((task, taskIndex) => (
+                    <motion.li
+                      key={task.id}
+                      variants={staggerItem}
+                      className="bg-[#096B68] p-2 rounded-lg text-[#FBF6E9] mb-2 flex items-center justify-between"
+                    >
+                      <span className="truncate">{task.title}</span>
+                      {task.isDone ? (
+                        <CheckCircle className="w-4 h-4 text-[#CFFFE2] ml-1" />
+                      ) : (
+                        <Circle className="w-4 h-4 text-red-300 ml-1" />
+                      )}
+                    </motion.li>
+                  ))}
+                </motion.ul>
+              </motion.div>
             );
-          }).length;
-
-          return (
+          })}
+        </motion.div>
+      </div>
+      {/* Desktop View: Weekly Grid */}
+      <div className="hidden sm:block">
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-7 gap-2 relative"
+          style={{ minHeight: "400px" }}
+        >
+          {weekDays.map((day, index) => (
             <motion.div
-              key={task.id}
+              key={index}
               variants={staggerItem}
-              className="absolute bg-[#096B68] p-2 rounded-lg text-xs text-[#FBF6E9] shadow-md flex items-center justify-between"
-              style={{
-                left: `${(startDay / 7) * 100}%`,
-                width: `${width}%`,
-                height: "40px",
-                top: `${overlapIndex * 50 + 60}px`,
-              }}
+              className="bg-white dark:bg-[#2A2A2A] p-2 rounded-lg shadow-md text-center text-[#212121] dark:text-[#FBF6E9] border border-[#CFFFE2]/20"
             >
-              <span className="truncate">{task.title}</span>
-              {task.isDone ? (
-                <CheckCircle className="w-4 h-4 text-[#CFFFE2] ml-1" />
-              ) : (
-                <Circle className="w-4 h-4 text-red-300 ml-1" />
-              )}
+              {day.toLocaleDateString("vi-VN", {
+                weekday: "short",
+                day: "numeric",
+              })}
             </motion.div>
-          );
-        })}
-      </motion.div>
+          ))}
+          {tasks.map((task, taskIndex) => {
+            const position = getTaskPosition(task);
+            if (!position) return null;
+            const { startDay, endDay } = position;
+            const width = ((endDay - startDay + 1) / 7) * 100;
+
+            const overlapIndex = tasks.filter((t, i) => {
+              const pos = getTaskPosition(t);
+              return (
+                i < taskIndex &&
+                pos &&
+                pos.startDay <= endDay &&
+                pos.endDay >= startDay
+              );
+            }).length;
+
+            return (
+              <motion.div
+                key={task.id}
+                variants={staggerItem}
+                className="absolute bg-[#096B68] p-2 rounded-lg text-xs text-[#FBF6E9] shadow-md flex items-center justify-between"
+                style={{
+                  left: `${(startDay / 7) * 100}%`,
+                  width: `${width}%`,
+                  height: "40px",
+                  top: `${overlapIndex * 50 + 60}px`,
+                }}
+              >
+                <span className="truncate">{task.title}</span>
+                {task.isDone ? (
+                  <CheckCircle className="w-4 h-4 text-[#CFFFE2] ml-1" />
+                ) : (
+                  <Circle className="w-4 h-4 text-red-300 ml-1" />
+                )}
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      </div>
     </div>
   );
 };
