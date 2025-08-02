@@ -2,7 +2,12 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Timestamp } from "firebase/firestore";
 import { useTaskStore } from "../../store/taskStore";
-import { addAssignedTask, addTask, updateTask } from "../../services/taskService";
+import {
+  addAssignedTask,
+  addTask,
+  removeAssignedTask,
+  updateTask,
+} from "../../services/taskService";
 import { useAuth } from "../../hooks/useAuth";
 import { type ChecklistItem } from "../../types/ChecklistItem";
 import { useCLIStore } from "../../store/cliStore";
@@ -22,8 +27,16 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { arrayMove, SortableContext, useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { fadeUp, hoverGrow, tapShrink, staggerContainer, staggerItem } from "../../utils/motionVariants";
+import {
+  fadeUp,
+  hoverGrow,
+  tapShrink,
+  staggerContainer,
+  staggerItem,
+} from "../../utils/motionVariants";
+import { fetchUsersByIds } from "../../services/userService";
+import type { User } from "../../types/User";
+import { GripVertical, Trash2 } from "lucide-react";
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -36,38 +49,37 @@ interface TaskModalProps {
 
 const SortableChecklistItem = ({
   item,
-  taskId,
-  columnId,
-  teamId,
-  boardId,
+  onDelete,
 }: {
   item: ChecklistItem;
   taskId: string;
   columnId: string;
   teamId: string;
   boardId: string;
+  onDelete: () => void;
 }) => {
-  const { attributes, listeners, setNodeRef, transform, transition } =
+  const { attributes, listeners, setNodeRef } =
     useSortable({ id: item.id });
-  const style = { transform: CSS.Transform.toString(transform), transition };
 
   return (
     <motion.li
       variants={staggerItem}
       ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
       className="flex justify-between items-center mb-1 cursor-move text-[#212121] dark:text-[#FBF6E9]"
     >
+      <GripVertical
+        {...attributes}
+        {...listeners}
+        className="cursor-move text-[#212121] dark:text-[#FBF6E9] opacity-50 hover:opacity-100 transition-opacity"
+      />
       <span>{item.text}</span>
       <motion.button
         {...hoverGrow}
         {...tapShrink}
-        onClick={() => deleteChecklistItem(teamId, boardId, columnId, taskId, item.id)}
+        onClick={onDelete}
         className="text-red-500 hover:text-red-700 transition-colors cursor-pointer"
       >
-        X
+        <Trash2 size={16} />
       </motion.button>
     </motion.li>
   );
@@ -81,15 +93,21 @@ const TaskModal: React.FC<TaskModalProps> = ({
   boardId,
   tempTaskId,
 }) => {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [dueDate, setDueDate] = useState<string | undefined>(undefined);
-  const [assignedEmails, setAssignedEmails] = useState<string[]>([]);
-  const [newEmail, setNewEmail] = useState("");
-  const [newChecklistText, setNewChecklistText] = useState("");
+  // task store
   const { user } = useAuth();
   const { itemsByTask, setItems } = useCLIStore();
   const { currentTask } = useTaskStore();
+  // state component
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [dueDate, setDueDate] = useState<string | undefined>(undefined);
+  const [assignedMembers, setAssignedMembers] = useState<string[]>(
+    currentTask?.assignedTo || []
+  );
+  const [newEmail, setNewEmail] = useState("");
+  const [newChecklistText, setNewChecklistText] = useState("");
+  const [membersData, setMembersData] = useState<User[]>([]);
+
   const taskId = currentTask?.id || tempTaskId;
 
   useEffect(() => {
@@ -103,15 +121,20 @@ const TaskModal: React.FC<TaskModalProps> = ({
             ? currentTask.dueDate.toDate().toISOString().split("T")[0]
             : undefined
         );
-        setAssignedEmails(currentTask.assignedTo || []);
-        const unsubscribe = subscribeToChecklistItems(teamId, boardId, columnId, taskId);
+        setAssignedMembers(currentTask.assignedTo || []);
+        const unsubscribe = subscribeToChecklistItems(
+          teamId,
+          boardId,
+          columnId,
+          taskId
+        );
         return () => unsubscribe();
       } else {
         // add mode
         setTitle("");
         setDescription("");
         setDueDate("");
-        setAssignedEmails([]);
+        setAssignedMembers([]);
         setItems(taskId, []);
       }
       setNewEmail("");
@@ -119,35 +142,58 @@ const TaskModal: React.FC<TaskModalProps> = ({
     }
   }, [isOpen, taskId, currentTask, columnId, boardId, teamId, setItems]);
 
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const membersData = await fetchUsersByIds(assignedMembers);
+      setMembersData(membersData);
+    };
+    fetchUserData();
+  }, [assignedMembers]);
+
   const addAssignedEmail = async () => {
-    if (newEmail && !assignedEmails.includes(newEmail)) {
-      try {
-        if (taskId) {
-          const result = await addAssignedTask(teamId, boardId, columnId, taskId, newEmail);
-          if (result.success) {
-            setAssignedEmails([...assignedEmails, result.userId]);
-            setNewEmail("");
-          }
+    try {
+      if (taskId) {
+        const result = await addAssignedTask(
+          teamId,
+          boardId,
+          columnId,
+          taskId,
+          newEmail
+        );
+        if (result.success) {
+          setAssignedMembers([...assignedMembers, result.userId]);
+          setNewEmail("");
         }
-      } catch (error: any) {
-        alert(error.message);
       }
-    } else {
-      alert("Người dùng đã đảm nhiệm!");
+    } catch (error: any) {
+      alert(error.message);
     }
   };
 
-  const removeAssignedEmail = (email: string) => {
-    setAssignedEmails(assignedEmails.filter((e) => e !== email));
+  const removeAssignedEmail = async (userId: string) => {
+    setAssignedMembers(assignedMembers.filter((e) => e !== userId));
+    await removeAssignedTask(teamId, boardId, columnId, taskId, userId);
   };
 
-  const handleAddChecklistItem = () => {
-    if (newChecklistText) {
-      addChecklistItem(teamId, boardId, columnId, taskId, {
-        text: newChecklistText,
-        done: false,
-      });
-      setNewChecklistText("");
+  const handleAddChecklistItem = async () => {
+    try {
+      if (taskId && newChecklistText) {
+        await addChecklistItem(teamId, boardId, columnId, taskId, {
+          text: newChecklistText,
+          done: false,
+        });
+        setNewChecklistText("");
+      }
+    } catch (error) {
+      console.error("Lỗi khi thêm checklist:", error);
+    }
+  };
+
+  const removeChecklistItem = async (cliId: string) => {
+    try {
+      await deleteChecklistItem(teamId, boardId, columnId, taskId, cliId);
+    } catch (err) {
+      console.error("Xoá checklist item thất bại:", err);
     }
   };
 
@@ -155,11 +201,21 @@ const TaskModal: React.FC<TaskModalProps> = ({
     const { active, over } = event;
     if (!active || !over || active.id === over.id) return;
 
-    const oldIndex = itemsByTask[taskId]?.findIndex((item) => item.id === active.id) || 0;
-    const newIndex = itemsByTask[taskId]?.findIndex((item) => item.id === over.id) || 0;
+    const oldIndex =
+      itemsByTask[taskId]?.findIndex((item) => item.id === active.id) || 0;
+    const newIndex =
+      itemsByTask[taskId]?.findIndex((item) => item.id === over.id) || 0;
     const newItems = arrayMove(itemsByTask[taskId] || [], oldIndex, newIndex);
     setItems(taskId, newItems);
-    await moveChecklistItem(teamId!, boardId!, columnId!, taskId!, active.id.toString(), newIndex, itemsByTask[taskId] || []);
+    await moveChecklistItem(
+      teamId!,
+      boardId!,
+      columnId!,
+      taskId!,
+      active.id.toString(),
+      newIndex,
+      itemsByTask[taskId] || []
+    );
   };
 
   const handleSave = async () => {
@@ -168,7 +224,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
     const taskData = {
       title,
       description,
-      assignedTo: assignedEmails ?? [],
+      assignedTo: assignedMembers ?? [],
       startDate: currentTask?.startDate ?? null,
       dueDate: dueDate ? Timestamp.fromDate(new Date(dueDate)) : undefined,
       isStart: currentTask?.isStart || false,
@@ -193,8 +249,19 @@ const TaskModal: React.FC<TaskModalProps> = ({
     }
   };
 
-  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
-  const checklistItems = itemsByTask[taskId] || [];
+  const handleClose = () => {
+    setNewEmail("");
+    onClose();
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor)
+  );
+
+  // const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>(
+  //   itemsByTask[taskId] || []
+  // );
 
   if (!isOpen) return null;
 
@@ -272,21 +339,25 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 Thêm
               </motion.button>
             </div>
-            <motion.ul variants={staggerContainer} initial="hidden" animate="show">
-              {assignedEmails.map((email) => (
+            <motion.ul
+              variants={staggerContainer}
+              initial="hidden"
+              animate="show"
+            >
+              {membersData.map((member) => (
                 <motion.li
                   variants={staggerItem}
-                  key={email}
+                  key={member.id}
                   className="flex justify-between items-center mb-1 text-[#212121] dark:text-[#FBF6E9]"
                 >
-                  <span>{email}</span>
+                  <span>{member.displayName}</span>
                   <motion.button
                     {...hoverGrow}
                     {...tapShrink}
-                    onClick={() => removeAssignedEmail(email)}
+                    onClick={() => removeAssignedEmail(member.id)}
                     className="text-red-500 hover:text-red-700 transition-colors cursor-pointer"
                   >
-                    X
+                    <Trash2 size={16} />
                   </motion.button>
                 </motion.li>
               ))}
@@ -313,10 +384,20 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 Thêm
               </motion.button>
             </div>
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={checklistItems.map((item) => item.id)}>
-                <motion.ul variants={staggerContainer} initial="hidden" animate="show">
-                  {checklistItems.map((item) => (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={(itemsByTask[taskId] || []).map((item) => item.id)}
+              >
+                <motion.ul
+                  variants={staggerContainer}
+                  initial="hidden"
+                  animate="show"
+                >
+                  {(itemsByTask[taskId] || []).map((item) => (
                     <SortableChecklistItem
                       key={item.id}
                       item={item}
@@ -324,6 +405,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                       columnId={columnId}
                       teamId={teamId}
                       boardId={boardId}
+                      onDelete={() => removeChecklistItem(item.id)}
                     />
                   ))}
                 </motion.ul>
@@ -334,7 +416,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
             <motion.button
               {...hoverGrow}
               {...tapShrink}
-              onClick={onClose}
+              onClick={handleClose}
               className="bg-[#212121] dark:bg-[#2A2A2A] text-[#FBF6E9] p-2 rounded-lg hover:bg-[#328E6E] transition-colors cursor-pointer"
             >
               Hủy

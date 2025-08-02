@@ -26,11 +26,22 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, X } from "lucide-react";
 import type { ChecklistItem } from "../types/ChecklistItem";
 import { useTeamStore } from "../store/teamStore";
-import { addChatMessage, subscribeToChatMessages } from "../services/chatService";
+import {
+  addChatMessage,
+  subscribeToChatMessages,
+} from "../services/chatService";
 import { useAuth } from "../hooks/useAuth";
 import { useChatStore } from "../store/chatStore";
 import { Timestamp } from "firebase/firestore";
-import { fadeUp, hoverGrow, tapShrink, staggerContainer, staggerItem } from "../utils/motionVariants";
+import {
+  fadeUp,
+  hoverGrow,
+  tapShrink,
+  staggerContainer,
+  staggerItem,
+} from "../utils/motionVariants";
+import type { User } from "../types/User";
+import { fetchUsersByIds } from "../services/userService";
 
 const SortableChecklistItem = ({
   item,
@@ -57,7 +68,9 @@ const SortableChecklistItem = ({
     updateChecklistItem(teamId, boardId, columnId, taskId, item.id, {
       done: !item.done,
     });
-    updateTask(teamId, boardId, columnId, taskId, { progress: getProgressByTask(taskId).percent });
+    updateTask(teamId, boardId, columnId, taskId, {
+      progress: getProgressByTask(taskId).percent,
+    });
   };
 
   const handleSaveEdit = () => {
@@ -111,7 +124,9 @@ const SortableChecklistItem = ({
         {...hoverGrow}
         {...tapShrink}
         disabled={!currentTask?.isStart}
-        onClick={() => deleteChecklistItem(teamId, boardId, columnId, taskId, item.id)}
+        onClick={() =>
+          deleteChecklistItem(teamId, boardId, columnId, taskId, item.id)
+        }
         className="ml-2 text-red-500 hover:text-red-700 disabled:opacity-50 transition-colors cursor-pointer"
       >
         <X size={16} />
@@ -138,12 +153,29 @@ const TaskPage: React.FC = () => {
   const { messagesByTask } = useChatStore();
   const { user } = useAuth();
   const [newChecklistText, setNewChecklistText] = useState("");
+  const [assignedMembers, setAssignedMembers] = useState<User[]>([]);
 
   useEffect(() => {
     if (teamId && boardId && columnId && taskId) {
-      const unsubscribeTask = subscribeToTask(teamId, boardId, columnId, taskId, (task) => setCurrentTask(task));
-      const unsubscribeChecklist = subscribeToChecklistItems(teamId, boardId, columnId, taskId);
-      const unsubscribeMessages = subscribeToChatMessages(teamId, boardId, columnId, taskId);
+      const unsubscribeTask = subscribeToTask(
+        teamId,
+        boardId,
+        columnId,
+        taskId,
+        (task) => setCurrentTask(task)
+      );
+      const unsubscribeChecklist = subscribeToChecklistItems(
+        teamId,
+        boardId,
+        columnId,
+        taskId
+      );
+      const unsubscribeMessages = subscribeToChatMessages(
+        teamId,
+        boardId,
+        columnId,
+        taskId
+      );
       return () => {
         unsubscribeTask();
         unsubscribeChecklist();
@@ -158,9 +190,20 @@ const TaskPage: React.FC = () => {
     }
   }, [teamId, boardId, columnId, taskId]);
 
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const membersData = await fetchUsersByIds(currentTask?.assignedTo!);
+      setAssignedMembers(membersData);
+    };
+    fetchUserData();
+  }, [currentTask?.assignedTo]);
+
   const handleStart = () => {
     if (!isStartClicked && currentTask && !currentTask.isStart) {
-      updateTask(teamId!, boardId!, columnId!, taskId!, { isStart: true, startDate: Timestamp.now() });
+      updateTask(teamId!, boardId!, columnId!, taskId!, {
+        isStart: true,
+        startDate: Timestamp.now(),
+      });
       setIsStartClicked(true);
     }
   };
@@ -210,7 +253,15 @@ const TaskPage: React.FC = () => {
     const newIndex = checklistItems.findIndex((item) => item.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
 
-    await moveChecklistItem(teamId!, boardId!, columnId!, taskId!, active.id.toString(), newIndex, checklistItems);
+    await moveChecklistItem(
+      teamId!,
+      boardId!,
+      columnId!,
+      taskId!,
+      active.id.toString(),
+      newIndex,
+      checklistItems
+    );
   };
 
   const handleSendMessage = () => {
@@ -246,10 +297,13 @@ const TaskPage: React.FC = () => {
           {currentTask?.description || "Không có mô tả"}
         </p>
         <p className="mb-2 text-[#212121] dark:text-[#FBF6E9]">
-          Ngày hết hạn: {currentTask?.dueDate ? currentTask.dueDate.toDate().toLocaleDateString("vi-VN") : "Không có ngày hết hạn"}
+          Ngày hết hạn:{" "}
+          {currentTask?.dueDate
+            ? currentTask.dueDate.toDate().toLocaleDateString("vi-VN")
+            : "Không có ngày hết hạn"}
         </p>
         <div className="mb-2 text-[#212121] dark:text-[#FBF6E9]">
-          Thành viên: {currentTask?.assignedTo?.length ? currentTask.assignedTo.join(", ") : "Không có thành viên"}
+          Thành viên: {assignedMembers.map((member) => (<img className="rounded-full size-6" src={member.avatarUrl}/>)) || "Không có thành viên"}
         </div>
         <div className="flex flex-wrap gap-4 mt-4">
           <motion.button
@@ -265,7 +319,11 @@ const TaskPage: React.FC = () => {
             {...hoverGrow}
             {...tapShrink}
             onClick={handleDone}
-            disabled={!currentTask?.isStart || !itemsByTask[taskId || ""]?.every((item) => item.done) || currentTask?.isDone}
+            disabled={
+              !currentTask?.isStart ||
+              !itemsByTask[taskId || ""]?.every((item) => item.done) ||
+              currentTask?.isDone
+            }
             className="bg-[#096B68] text-[#FBF6E9] px-4 py-2 rounded-lg cursor-pointer disabled:bg-[#212121]/50 disabled:text-[#FBF6E9]/50 hover:bg-[#328E6E] transition-colors"
           >
             Hoàn thành
@@ -300,7 +358,11 @@ const TaskPage: React.FC = () => {
             <h3 className="text-xl font-semibold text-[#212121] dark:text-[#FBF6E9]">
               Danh sách công việc
             </h3>
-            <div className={!currentTask?.isStart ? "pointer-events-none opacity-50" : ""}>
+            <div
+              className={
+                !currentTask?.isStart ? "pointer-events-none opacity-50" : ""
+              }
+            >
               <input
                 type="text"
                 value={newChecklistText}
@@ -320,9 +382,18 @@ const TaskPage: React.FC = () => {
               </motion.button>
             </div>
           </div>
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
             <SortableContext items={checklistItems.map((item) => item.id)}>
-              <motion.ul variants={staggerContainer} initial="hidden" animate="show" className="space-y-2">
+              <motion.ul
+                variants={staggerContainer}
+                initial="hidden"
+                animate="show"
+                className="space-y-2"
+              >
                 {checklistItems.map((item) => (
                   <SortableChecklistItem
                     key={item.id}
@@ -345,7 +416,9 @@ const TaskPage: React.FC = () => {
           animate="animate"
           className="bg-white dark:bg-[#2A2A2A] p-4 rounded-lg shadow-md flex-1 border border-[#CFFFE2]/20"
         >
-          <h3 className="text-xl font-semibold text-[#212121] dark:text-[#FBF6E9] mb-4">Chat</h3>
+          <h3 className="text-xl font-semibold text-[#212121] dark:text-[#FBF6E9] mb-4">
+            Chat
+          </h3>
           <motion.div
             variants={staggerContainer}
             initial="hidden"

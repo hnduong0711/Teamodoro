@@ -187,8 +187,8 @@ export const deleteTask = async (
   useTaskStore.getState().deleteTask(columnId, taskId);
 };
 
-// phân quyền thành viên
-// thêm vào bảng
+// phân công thành viên
+// thêm vào task
 export const addAssignedTask = async (
   teamId: string,
   boardId: string,
@@ -196,7 +196,11 @@ export const addAssignedTask = async (
   taskId: string,
   email: string
 ) => {
-  const taskRef = doc(db, `teams/${teamId}/boards/${boardId}/columns/${columnId}/tasks/`, taskId);
+  const taskRef = doc(
+    db,
+    `teams/${teamId}/boards/${boardId}/columns/${columnId}/tasks/`,
+    taskId
+  );
   const taskSnap = await getDoc(taskRef);
   if (!taskSnap.exists()) throw new Error("Task not found");
 
@@ -216,21 +220,26 @@ export const addAssignedTask = async (
   }
 
   // kiểm tra user thuộc team không
-  const teamData = boardSnap.data() as Board;
-  if (!teamData.members || !teamData.members.includes(user.id)) {
-    throw new Error("Người dùng không thuộc nhóm này!");
+  const boardData = boardSnap.data() as Board;
+  if (!boardData.isPublic) {
+    if (!boardData.members || !boardData.members.includes(user.id)) {
+      throw new Error("Người dùng không thuộc nhóm này!");
+    }
   }
 
-  if(!taskData.assignedTo || !taskData.assignedTo.includes(user.id)) {
-    throw new Error("Người dùng không thuộc nhóm này!");
+  if (taskData.assignedTo && taskData.assignedTo.includes(user.id)) {
+    throw new Error("Người dùng đã đảm nhiệm công việc này!");
   }
-  
+
   // lưu user vào firebase
   const updatedAssigned = taskData.assignedTo
-    ? [...taskData.assignedTo, user.id] : [user.id];
-  await updateDoc(taskRef, { assignedTo : updatedAssigned });
+    ? [...taskData.assignedTo, user.id]
+    : [user.id];
+  await updateDoc(taskRef, { assignedTo: updatedAssigned });
   // update cho task
-  useTaskStore.getState().updateTaskInState(columnId,taskId,{assignedTo: updatedAssigned});
+  useTaskStore
+    .getState()
+    .updateTaskInState(columnId, taskId, { assignedTo: updatedAssigned });
   return { success: true, userId: user.id };
 };
 
@@ -240,18 +249,24 @@ export const removeAssignedTask = async (
   boardId: string,
   columnId: string,
   taskId: string,
-  email: string
+  userId: string
 ) => {
-  const taskRef = doc(db, `teams/${teamId}/boards/${boardId}/columns/${columnId}/tasks/`, taskId);
+  const taskRef = doc(
+    db,
+    `teams/${teamId}/boards/${boardId}/columns/${columnId}/tasks/`,
+    taskId
+  );
 
   const taskSnap = await getDoc(taskRef);
   if (taskSnap.exists()) {
     const taskData = taskSnap.data() as Task;
     const updatedMembers = taskData.assignedTo
-      ? taskData.assignedTo.filter((m: string) => m !== email)
+      ? taskData.assignedTo.filter((m: string) => m !== userId)
       : [];
     await updateDoc(taskRef, { assignedTo: updatedMembers });
-    useTaskStore.getState().updateTaskInState(columnId,taskId,{ assignedTo: updatedMembers });
+    useTaskStore
+      .getState()
+      .updateTaskInState(columnId, taskId, { assignedTo: updatedMembers });
   }
 };
 

@@ -96,7 +96,7 @@ const BoardPage = () => {
         </motion.h2>
         <nav className="space-y-2">
           <NavLink
-            to={`/boards/${boardId}`}
+            to={`/board/${boardId}`}
             className={({ isActive }) =>
               `block py-2 px-4 rounded transition-colors ${isActive ? 'bg-[#328E6E]' : 'hover:bg-[#328E6E]'}`
             }

@@ -228,6 +228,7 @@ const Column: React.FC<ColumnProps> = ({ id, column, onEdit, onDelete }) => {
                   key={task.id}
                   id={task.id}
                   title={task.title}
+                  dueDate={task.dueDate!}
                   boardId={boardId || ""}
                   columnId={id}
                   onEdit={handleEditTask}

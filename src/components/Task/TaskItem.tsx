@@ -11,12 +11,15 @@ import {
   tapShrink,
   scaleIn,
 } from "../../utils/motionVariants";
+import type { Timestamp } from "firebase/firestore";
+import { getDueDateStatus } from "../../utils/getDueDateStatus";
 
 interface TaskItemProps {
   id: string;
   title: string;
   boardId: string;
   columnId: string;
+  dueDate: Timestamp;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
 }
@@ -26,6 +29,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
   title,
   boardId,
   columnId,
+  dueDate,
   onEdit,
   onDelete,
 }) => {
@@ -35,6 +39,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
   const style = { transform: CSS.Transform.toString(transform), transition };
   const { getProgressByTask } = useCLIStore();
   const { percent } = getProgressByTask(id);
+  const { isOverdue, message } = getDueDateStatus(dueDate);
 
   return (
     <div ref={setNodeRef} style={style}>
@@ -54,8 +59,14 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
           {/* task content */}
           <NavLink
-            to={`/board/${boardId}/column/${columnId}/task/${id}`}
-            className="flex flex-col flex-1 gap-2"
+            to={
+              isOverdue
+                ? "#"
+                : `/board/${boardId}/column/${columnId}/task/${id}`
+            }
+            className={`flex flex-col flex-1 gap-2 ${
+              isOverdue ? "pointer-events-none opacity-60" : ""
+            }`}
           >
             <div className="text-[#212121] dark:text-[#FBF6E9] hover:text-[#328E6E] transition-colors font-medium">
               {title}
@@ -74,6 +85,9 @@ const TaskItem: React.FC<TaskItemProps> = ({
                   {percent}%
                 </div>
               </div>
+            </div>
+            <div className="text-xs text-red-600 dark:text-red-400 font-semibold mt-1">
+              {message}
             </div>
           </NavLink>
 
