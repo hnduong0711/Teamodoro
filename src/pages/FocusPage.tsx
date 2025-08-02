@@ -24,8 +24,9 @@ import {
 } from "@dnd-kit/core";
 import type { ChecklistItem } from "../types/ChecklistItem";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, X } from "lucide-react";
+import { GripVertical, X, Play, Pause } from "lucide-react";
 import { fadeUp, hoverGrow, tapShrink, scaleIn, staggerContainer, staggerItem } from "../utils/motionVariants";
+import Music from '../assets/Music/pomodoro.mp3';
 
 const SortableChecklistItem = ({
   item,
@@ -125,6 +126,8 @@ const FocusMode: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [focusType, setFocusType] = useState("25/5");
   const [sandColor, setSandColor] = useState("#096B68");
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolume] = useState(0.5);
   const audioRef = useRef<HTMLAudioElement>(null);
   const teamId = useTeamStore.getState().currentTeam?.id;
   const [newChecklistText, setNewChecklistText] = useState("");
@@ -173,6 +176,12 @@ const FocusMode: React.FC = () => {
     setSandColor("#096B68");
   }, [focusType]);
 
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume]);
+
   const handleAddChecklistItem = () => {
     if (newChecklistText) {
       addChecklistItem(teamId!, boardId!, columnId!, taskId!, {
@@ -209,7 +218,20 @@ const FocusMode: React.FC = () => {
   const handlePlayMusic = () => {
     if (audioRef.current) {
       audioRef.current.play();
+      setIsPlaying(true);
     }
+  };
+
+  const handlePauseMusic = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
+  };
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = parseFloat(e.target.value);
+    setVolume(newVolume);
   };
 
   const formatTime = (seconds: number) => {
@@ -326,7 +348,7 @@ const FocusMode: React.FC = () => {
           </DndContext>
         </motion.div>
 
-        {/* Sand Clock */}
+        {/* sand clock */}
         <motion.div
           variants={fadeUp}
           initial="initial"
@@ -334,9 +356,9 @@ const FocusMode: React.FC = () => {
           className="flex flex-col items-center justify-center p-4 rounded-lg shadow-md w-full lg:w-auto border border-[#CFFFE2]/20"
         >
           <div className="relative w-40 h-64">
-            {/* Top Frame */}
+            {/* top frame */}
             <div className="absolute top-0 rotate-180 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[80px] border-r-[80px] border-b-[120px] border-transparent border-b-[#096B68]"></div>
-            {/* Top Sand */}
+            {/* top sand*/}
             <motion.div
               variants={scaleIn}
               initial="initial"
@@ -353,9 +375,9 @@ const FocusMode: React.FC = () => {
                 }}
               ></div>
             </motion.div>
-            {/* Bottom Frame */}
+            {/* bot frame */}
             <div className="absolute bottom-0 rotate-180 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[80px] border-r-[80px] border-t-[120px] border-transparent border-t-[#212121]"></div>
-            {/* Bottom Sand */}
+            {/* bot sand */}
             <motion.div
               variants={scaleIn}
               initial="initial"
@@ -372,10 +394,10 @@ const FocusMode: React.FC = () => {
                 }}
               ></div>
             </motion.div>
-            {/* Center Dot */}
+            {/* dot */}
             <div className="absolute w-2 h-2 bg-[#096B68] rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10"></div>
           </div>
-          {/* Time Display */}
+          {/* time sisplay */}
           <div className="text-[#212121] dark:text-[#FBF6E9] font-bold z-20 mt-4">
             {formatTime(timeLeft)}
           </div>
@@ -389,35 +411,52 @@ const FocusMode: React.FC = () => {
           >
             {isActive ? "Dừng" : "Bắt đầu"}
           </motion.button>
-          {/* Controls */}
+          {/* controls */}
           <motion.div
             variants={fadeUp}
             initial="initial"
             animate="animate"
             className="mt-8 p-4 bg-white dark:bg-[#2A2A2A] rounded-lg shadow-md w-full flex flex-col sm:flex-row items-center justify-between gap-4 border border-[#CFFFE2]/20"
           >
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
               <label className="text-[#212121] dark:text-[#FBF6E9]">
                 Loại tập trung:
               </label>
               <select
                 value={focusType}
                 onChange={(e) => setFocusType(e.target.value)}
-                className="p-2 border border-[#CFFFE2] rounded-lg bg-white dark:bg-[#212121] text-[#212121] dark:text-[#FBF6E9] focus:outline-none focus:border-[#328E6E]"
+                className="p-2 border border-[#CFFFE2] rounded-lg bg-white dark:bg-[#212121] text-[#212121] dark:text-[#FBF6E9] focus:outline-none focus:border-[#328E6E] w-full sm:w-auto"
               >
                 <option value="25/5">25/5</option>
                 <option value="50/10">50/10</option>
               </select>
             </div>
-            <motion.button
-              {...hoverGrow}
-              {...tapShrink}
-              onClick={handlePlayMusic}
-              className="px-4 py-2 bg-[#096B68] text-[#FBF6E9] rounded-lg hover:bg-[#328E6E] transition-colors cursor-pointer"
-            >
-              Phát nhạc
-            </motion.button>
-            <audio ref={audioRef} src="path/to/your/music.mp3" loop autoPlay={false}></audio>
+            <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+              <motion.button
+                {...hoverGrow}
+                {...tapShrink}
+                onClick={isPlaying ? handlePauseMusic : handlePlayMusic}
+                className="px-4 py-2 bg-[#096B68] text-[#FBF6E9] rounded-lg hover:bg-[#328E6E] transition-colors cursor-pointer flex items-center gap-2"
+              >
+                {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+                {isPlaying ? "Dừng nhạc" : "Phát nhạc"}
+              </motion.button>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <label className="text-[#212121] dark:text-[#FBF6E9] whitespace-nowrap">
+                  Âm lượng:
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={volume}
+                  onChange={handleVolumeChange}
+                  className="w-full sm:w-24 accent-[#096B68]"
+                />
+              </div>
+            </div>
+            <audio ref={audioRef} src={Music} loop autoPlay={false}></audio>
           </motion.div>
         </motion.div>
       </div>
